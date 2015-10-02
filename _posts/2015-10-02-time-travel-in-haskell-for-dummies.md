@@ -414,7 +414,7 @@ assemble addr (instr : is') = do
   return $ (addr, instr) : rest
 {% endhighlight %}
 
-Now we come up with some instructions:
+Now we come up with some test instructions:
 
 {% highlight haskell %}
 input :: [Instr]
