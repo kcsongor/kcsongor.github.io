@@ -1,8 +1,8 @@
 # Site wide configuration
 
-title:            Site Title
-locale:           en_US
-url:
+title:            '()'
+locale:           en_UK
+url: kcsongor.github.io
 
 
 # Jekyll configuration
@@ -26,21 +26,21 @@ kramdown:
 
 # Site owner
 owner:
-  name: Your Name
+  name: Csongor Kiss
   avatar: bio-photo.jpg
-  bio: "Describe your self."
+  bio: "I like curry"
   email:
   disqus-shortname:
-  twitter: #username
+  twitter: lowert #username
   facebook: #username
   google:
-    plus: #username
+    plus: +CsongorKiss #username
     analytics:
     verify:
     ad-client:
     ad-slot:
   bing-verify:
-  github: #username
+  github: kcsongor #username
   stackoverflow: #123456/username   from a "http://stackoverflow.com/users/123456/username" link
   linkedin: #username
   xing: #username
@@ -51,7 +51,7 @@ owner:
   foursquare: #username
   steam: #username
   dribbble: #username
-  youtube: #username
+  youtube: UCtP38SgqzkA4LQLztsnQtJA #username
   soundcloud: #username
   weibo: #username
   flickr: #username
