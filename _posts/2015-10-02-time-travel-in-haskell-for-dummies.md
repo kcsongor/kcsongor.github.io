@@ -80,7 +80,7 @@ doRepMax xs = xs'
 
 This can be done thanks to lazy evaluation. Haskell systems use so-called
 ’thunks’ for values that are yet to be evaluated. When you say `(min 5 6)`, the
-expression will form a thunk and not be evaluated until it really needs to.
+expression will form a thunk and not be evaluated until it really needs to be.
 Here, rep can be thought of as a reference to a thunk. When we tell GHC to put
 `largest` in all slots of the list, it will in fact put a reference to the same
 thunk in those slots, not the actual data. As we pass the list, this thunk is
