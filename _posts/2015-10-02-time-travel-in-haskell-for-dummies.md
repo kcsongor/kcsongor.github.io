@@ -454,7 +454,7 @@ progressing further. In this case, I’d advise the use of a Writer monad which
 has a lazy mechanism, and the results can be printed at the end using IO.
 
 ### Thanks
-Thanks for reading this length post, in which we saw how we can mimic the use
+Thanks for reading this lengthy post, in which we saw how we can mimic the use
 of pointers in pure Haskell code. This comes at a price though: accumulating 
 unevaluated thunks can use up quite a bit of memory, so be careful if you want 
 to use these techniques in a memory critical environment.
