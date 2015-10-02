@@ -21,15 +21,15 @@ footer-links:
   email:
   facebook:
   flickr:
-  github:
+  github: kcsongor
   instagram:
   linkedin:
   pinterest:
   rss: # just type anything here for a working RSS icon, make sure you set the "url" above!
   twitter: lowert
   stackoverflow: # your stackoverflow profile, e.g. "users/50476/bart-kiers"
-  youtube: # channel/UCtP38SgqzkA4LQLztsnQtJA
-  googleplus: +CsongorKiss # anything in your profile username that comes after plus.google.com/
+  youtube: 'channel/UCtP38SgqzkA4LQLztsnQtJA'
+  googleplus: '+CsongorKiss' # anything in your profile username that comes after plus.google.com/
 
 
 # Enter your Disqus shortname (not your username) to enable commenting on posts
