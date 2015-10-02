@@ -348,8 +348,8 @@ Done!
 
 The problem arises from the fact that some labels might be defined after they
 are used. The 'else' block of an if statement will typically be done like this.
-Implementing this in C, you might remember these positions and at the end, fill
-in the gaps with the knowledge you have. Thunks, anyone?
+Implementing this in C, you could remember these positions and at the end, fill
+in the gaps with the knowledge you have acquired. Thunks, anyone?
 
 I’ll just use a Rev-State monad and send these definitions back in time.
 Simple enough, right?
