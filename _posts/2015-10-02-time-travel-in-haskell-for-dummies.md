@@ -340,7 +340,7 @@ to handle such errors.)
 runAssembler :: [Instr] -> [(Addr, Instr)]
 {% endhighlight %}
 
-Jumping to a label that is already defined is easy, we look look it up in our
+Jumping to a label that is already defined is easy, we look it up in our
 SymTable and convert `ToLabel` to `ToAddr`. This sounds like an application
 of the State monad, doesn’t it? 
 When we encounter a label definition, just add it to the state (`SymTable`).
