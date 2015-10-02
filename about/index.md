@@ -8,4 +8,4 @@ image:
   feature:
 ---
 
-I am a 2nd year computer scince student at Imperial College London.
+I am a 2nd year computer science student at Imperial College London.
