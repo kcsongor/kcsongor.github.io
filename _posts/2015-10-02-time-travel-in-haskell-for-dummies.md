@@ -327,7 +327,7 @@ data Instr = Add
             deriving (Show)
 {% endhighlight %}
 
-Instr is a rather rudimentary representation of assembly instructions, but it
+`Instr` is a rather rudimentary representation of assembly instructions, but it
 does the job for us now.
 
 What we want to have is a function that takes a list of `Instr`s and returns
