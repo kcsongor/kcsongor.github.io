@@ -27,14 +27,14 @@ kramdown:
 # Site owner
 owner:
   name: Csongor Kiss
-  avatar: bio-photo.jpg
+  avatar: "https://avatars0.githubusercontent.com/u/313596?v=3&s=460"
   bio: "I like curry"
   email:
   disqus-shortname:
   twitter: lowert #username
   facebook: #username
   google:
-    plus: +CsongorKiss #username
+    plus: CsongorKiss #username
     analytics:
     verify:
     ad-client:
@@ -51,7 +51,7 @@ owner:
   foursquare: #username
   steam: #username
   dribbble: #username
-  youtube: UCtP38SgqzkA4LQLztsnQtJA #username
+  youtube: lowertz #username
   soundcloud: #username
   weibo: #username
   flickr: #username
