@@ -378,7 +378,7 @@ runAssembler asm = instructions
 
 The `assemble` function turns a list of instructions to `[(Addr, Instr)]`
 in the Assembler monad (which is a synonym for Tardis SymTable SymTable).
-What’s that 0 doing there, you might ask?
+What’s that 0 doing there, you ask?
 
 We need to keep track of the address we will use for the next instruction.
 This is because of labels. When we encounter a regular instruction, we put
