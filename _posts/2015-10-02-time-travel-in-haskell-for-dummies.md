@@ -309,7 +309,7 @@ assembly instructions and turn them into their binary equivalent for the given
 CPU architecture.
 
 However, there are some instructions that we can’t immediately convert.
-One of such instructions are labels for branching. (jumps)
+One of such instructions is a label for branching. (jumps)
 For these labels, we need a symbol table. 
 {% highlight haskell %}
 import qualified Data.Map.Strict as M
