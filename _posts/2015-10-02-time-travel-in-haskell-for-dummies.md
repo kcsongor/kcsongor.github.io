@@ -401,7 +401,7 @@ assemble addr (ToLabel label : is') = do
   bw <- getFuture
   fw <- getPast
   let union = M.union bw fw -- take union of the two symbol tables
-      this = case (M.lookup label union) of
+      this = case M.lookup label union of
                 Just a' -> (addr, ToAddr a')
                 Nothing -> (addr, Err)
   rest <- assemble (addr + 1) is'
