@@ -68,7 +68,7 @@ So, it takes a list, and the rep element, and returns (Int, [Int])
 `repMax [1,2,3,4,5,3] 6`
 gives us `(5, [6,6,6,6,6,6])` which is exactly what we wanted: the elements are
 replaced with rep and we also have the largest element.
-Now, all we need to do is use that largest element as rep:
+Now, all we need to do is use that largest element as `rep`:
   
 {% highlight haskell %}
 doRepMax :: [Int] -> [Int]
