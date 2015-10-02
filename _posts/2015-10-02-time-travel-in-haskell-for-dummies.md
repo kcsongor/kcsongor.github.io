@@ -455,7 +455,8 @@ has a lazy mechanism, and the results can be printed at the end using IO.
 
 ### Thanks
 Thanks for reading this lengthy post, in which we saw how we can mimic the use
-of pointers in pure Haskell code. This comes at a price though: accumulating 
+of pointers in pure Haskell code (altough time-travel is an arguably better
+name for this). This comes at a price though: accumulating 
 unevaluated thunks can use up quite a bit of memory, so be careful if you want 
 to use these techniques in a memory critical environment.
 
