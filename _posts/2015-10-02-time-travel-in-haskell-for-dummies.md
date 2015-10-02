@@ -109,8 +109,8 @@ foldmax ls = ls'
 Brilliant! Now we can use this technique on everything that is Foldable!
 Or can we?
 
-Taking a look at the type signature of the generalised `foldr` (from
-Data.Foldable): `Data.Foldable.foldr :: Foldable t => (a -> b -> b) -> b -> t a
+Taking a look at the type signature of the generalised `foldl` (from
+Data.Foldable): `Data.Foldable.foldl :: Foldable t => (b -> a -> b) -> b -> t a
 -> b` we realise that the returned value’s structure `b` is independent from
 that of the input `t a`. The reason we could get away with this in our fold
 example was that we knew we were dealing with a list, so we used the `:`
