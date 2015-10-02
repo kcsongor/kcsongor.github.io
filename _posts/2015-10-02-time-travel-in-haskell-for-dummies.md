@@ -431,7 +431,9 @@ input = [Add,
 {% endhighlight %}
 
 ...and we can try running the assembler on this data:
+
 `> runAssembler input`
+
 `> [(0,Add),(1,Add),(2,ToAddr 5),(3,Mov),(4,Mov),(5,Mov),(6,ToAddr 5),(7,Mov)]`
 
 Yay! Just what we wanted!
