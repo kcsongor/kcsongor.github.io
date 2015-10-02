@@ -308,7 +308,7 @@ Writing an assembler is relatively straightforward. We go through a list of
 assembly instructions and turn them into their binary equivalent for the given
 CPU architecture.
 
-However, we there are some instructions that we can’t immediately convert.
+However, there are some instructions that we can’t immediately convert.
 One of such instructions are labels for branching. (jumps)
 For these labels, we need a symbol table. 
 {% highlight haskell %}
