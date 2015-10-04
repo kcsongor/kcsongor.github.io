@@ -201,7 +201,7 @@ bindStatefulFunctions ::
   (a -> s -> (b, s)) ->
   s -> (b, s)
 bindStatefulFunctions f1 f2 = \initialState ->
-  let (updateState, result) = f1 initialState
+  let (updatedState, result) = f1 initialState
   in f2 result updatedState
 {% endhighlight %}
 
@@ -301,7 +301,7 @@ I say states, because naturally, we have data coming from the future and
 data coming from the past, and those make two (a backwards travelling and a
 forwards travelling state).
 
-These could be of different types, say we can say Strings back in time and
+These could be of different types, say we can send Strings back in time and
 Ints to the future.
 
 ### A single-pass assembler: an example
