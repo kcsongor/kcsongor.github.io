@@ -88,7 +88,9 @@ building up with nested `max` expressions. For `[1,2,3,4]`, will end up with a
 thunk: `max 1 (max 2 (max 3 4))`.
 A reference to this thunk will be placed everywhere in the list. By the time we
 finished traversing the list, the thunk will be finished too, and can be
-evaluated.
+evaluated. (Before finishing, the thunk has the form similar to
+`max 1 (_something_)` where `_something_` is the max of the rest of the list.
+This obivously can not be evaluated at this point)
 
 How about generalising this idea to other data structures?
 
