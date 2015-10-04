@@ -81,11 +81,11 @@ doRepMax xs = xs'
 This can be done thanks to lazy evaluation. Haskell systems use so-called
 ’thunks’ for values that are yet to be evaluated. When you say `(min 5 6)`, the
 expression will form a thunk and not be evaluated until it really needs to be.
-Here, rep can be thought of as a reference to a thunk. When we tell GHC to put
+Here, `rep` can be thought of as a reference to a thunk. When we tell GHC to put
 `largest` in all slots of the list, it will in fact put a reference to the same
 thunk in those slots, not the actual data. As we pass the list, this thunk is
 building up with nested `max` expressions. For `[1,2,3,4]`, will end up with a
-thunk: `(max (max (max 1 2) 3) 4)`.
+thunk: `max 1 (max 2 (max 3 4))`.
 A reference to this thunk will be placed everywhere in the list. By the time we
 finished traversing the list, the thunk will be finished too, and can be
 evaluated.
