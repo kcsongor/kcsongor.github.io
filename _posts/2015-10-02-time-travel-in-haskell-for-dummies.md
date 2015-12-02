@@ -260,8 +260,8 @@ Imagine using the same laziness self-feeding trick, but for passing the
 state:
 
 {% highlight haskell %}
-reverseBind stateful1 stateful2 = \s ->
-  (x', s'')
+reverseBind stateful1 stateful2
+  = \s -> (x', s'')
   where (x, s'') = stateful1 s'
         (x', s') = stateful2 x s
 {% endhighlight %}
