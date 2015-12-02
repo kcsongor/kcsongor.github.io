@@ -196,12 +196,12 @@ statefulFunction arg1 arg2 arg3 counter =
 {% endhighlight %}
 
 {% highlight haskell %}
-bindStatefulFunctions :: 
+bindStatefulFunctions ::
   (s -> (a, s)) ->
   (a -> s -> (b, s)) ->
   s -> (b, s)
 bindStatefulFunctions f1 f2 = \initialState ->
-  let (updatedState, result) = f1 initialState
+  let (result, updatedState) = f1 initialState
   in f2 result updatedState
 {% endhighlight %}
 
@@ -230,7 +230,8 @@ statefulFunction arg1 arg2 arg3 = do
 (Did you know that Haskell is also the best imperative language?)
 Notice how the state is not explicitly passed as an argument (thus our
 function is partially applied), but is bound to counter by the get function.
-Put then puts the updated counter back in the state.
+Put then puts the updated counter back in the state. Return then just makes
+sure that what we get out of is wrapped back in the State monad.
 
 --------------------------------------------------------------------------------
 
@@ -281,7 +282,7 @@ to do whatever it wanted. These references are not explicit though as they
 would be in C (using pointers, for example), but implicitly placed there
 by GHC as thunks.
 
-That also means whatever do with these values has to be done lazily. (an
+That also means whatever we do with these values has to be done lazily. (an
 example below)
 
 The above code is a modified version of the monadic binding found in the
