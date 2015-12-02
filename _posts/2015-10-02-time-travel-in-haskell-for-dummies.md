@@ -192,7 +192,7 @@ signatures and in the actual code that is using the state.
 For example, using the state as a counter:
 {% highlight haskell %}
 statefulFunction arg1 arg2 arg3 counter =
-  (counter + 1, arg1 + arg2 + arg3)
+  (arg1 + arg2 + arg3, counter + 1)
 {% endhighlight %}
 
 {% highlight haskell %}
