@@ -2,10 +2,11 @@
 layout: page
 title: About me
 tags: [about]
-modified: 2015-10-02
+modified: 2017-9-24
 comments: true
 image:
   feature:
 ---
 
-I am a 2nd year computer science student at Imperial College London.
+I'm a final year undergraduate at Imperial College London, studying computer
+science.
