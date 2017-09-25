@@ -175,8 +175,8 @@ That is, it takes a symbol, and returns the matching specifier. The
 implementation is straightforward:
 
 {% highlight haskell %}
-instance matchFmtD :: MatchFmt "d" D
-instance matchFmtS :: MatchFmt "s" S
+instance parse2D :: Parse2 "d" D
+instance parse2S :: Parse2 "s" S
 {% endhighlight %}
 
 This is a partial function, which means that format strings that contain
