@@ -31,7 +31,7 @@ output string.
 {% endhighlight %}
 
 Other languages, like rust, solve this by various means of metaprogramming:
-writing a program (macro) that run at compile-time, to generate the program to
+writing a program (macro) that runs at compile-time, generating the program to
 be executed at runtime.
 
 What these two approaches have in common is that they both operate on strings
