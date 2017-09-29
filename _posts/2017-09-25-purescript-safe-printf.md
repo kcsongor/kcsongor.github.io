@@ -37,7 +37,7 @@ be executed at runtime.
 What these two approaches have in common is that they both operate on strings
 that are statically available to the compiler. The aim of this post is to show
 another way of achieving the same result, with tools that are available in
-PureScript - a strongly-typed functional language, with no dependent types.
+PureScript -- a strongly-typed functional language, with no dependent types.
 
 ## The problem
 
@@ -70,6 +70,11 @@ Error found:
 while trying to match type Function String
   with type Function Int
 {% endhighlight %}
+
+The `@` symbol before the string is the proxy syntax introduced in 0.12
+which provides a concise way of passing types around. The format strings
+are actually type-level literals -- but more on this later.
+{: .notice}
 
 Crucially, we need to compute a type from some input, but because PureScript
 has no dependent types, values and functions in the traditional sense are not
@@ -125,9 +130,10 @@ With this, we can now write types like `FCons D (FCons (Lit " foo") FNil)`,
 corresponding to the string `%d foo`.
 
 Kind-polymorphism is not supported by the current version (0.12) of PureScript,
-so we can't define a parametric type-level list once and for all - we need a
-new one for each type we want to store in lists. This limitation is likely to
-be removed in a future version of the compiler.
+so we can't define a parametric type-level list once and for all -- we need a
+new one for each type we want to store in lists. With this, and some syntactic
+sugar, we would be able to write (as we can in Haskell today) `[D, "foo"]`.
+This limitation is likely to be removed in a future version of the compiler.
 {: .notice}
 
 With these building blocks defined, now we have a vocabulary for talking about
@@ -223,7 +229,7 @@ else instance parse1Pc ::
 literal. For this, we first recursively parse the tail `s` into
 `FCons (Lit acc) r`. The reason we want to know that at the head of parsing
 the remaining string is a `Lit` is so that we can prepend the current character
-to that literal - we need to rebuild long string literals
+to that literal -- we need to rebuild long string literals
 character-by-character after all. This is where the invariant from the previous
 two cases is useful: we don't have to handle the cases where the head is not
 a `Lit`, because the recursive calls guarantee that it is. `acc` is thus the
@@ -248,7 +254,7 @@ character is `%`, both `parse1Pc` and `parse1Other` match (because
 To make sure that the instances are selected in the order we want them to be,
 we use instance chains. That is, by writing `instance A else instance B` we
 tell the compiler to try to match instance `A` first, and if it fails, then try
-`B`. This is a new feature in PureScript 0.12, and a very powerful one - it
+`B`. This is a new feature in PureScript 0.12, and a very powerful one -- it
 allows us to avoid the overlapping instance problem for good.
 
 Finally, we need to actually kick off the parser. We do this by invoking it
@@ -278,14 +284,14 @@ class FormatF (format :: FList) fun | format -> fun where
 The `@` symbol is special syntax, and in this case, it means that the `formatF`
 function takes an `FList` (`format`) as an input. But because `FList` is a
 _custom kind_, it has no value-level inhabitants. So, how can we still get
-something whose type mentions `format`? This is what `@` does - it's a proxy
+something whose type mentions `format`? This is what `@` does -- it's a proxy
 for a type. Its value is isomorphic to `Unit`, and carries no information,
-other than its type. Notice that it works for any kind - indeed, proxies are
+other than its type. Notice that it works for any kind -- indeed, proxies are
 currently a special-cased type in PureScript, in that they are kind-polymorphic.
 {: .notice}
 
 Thus `formatF` takes a format list, and an accumulator string, and returns some
-`fun` - this type depends on the actual format list.
+`fun` -- this type depends on the actual format list.
 
 Starting with the base case, when there's nothing to print, simply just
 return the accumulated formatted string.
