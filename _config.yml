@@ -9,7 +9,7 @@ url: 'http://kcsongor.github.io'
 
 permalink:   /:categories/:title/
 markdown:    kramdown
-highlighter: rogue
+highlighter: rouge
 sass:
   sass_dir: _sass
   style: compressed

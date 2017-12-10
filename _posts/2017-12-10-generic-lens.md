@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Announcing generic-lens 0.5.0.0
+excerpt: Deriving lenses generically
 modified: 2017-10-10
 tags: [haskell, generic-lens, generics, lens]
 comments: true
@@ -16,41 +17,16 @@ comments: true
 </div>
 </section><!-- /#table-of-contents -->
 
-[generic-lens](https://hackage.haskell.org/package/generic-lens) is a library
-that provides utilities for deriving a number of optics for your datatypes, using
-`GHC.Generics` (which means no TH). The resulting lenses and prisms are fully
-compatible with Edward Kmett's [lens](https://hackage.haskell.org/package/lens)
-library, but there is no dependency on `lens`, which means they can be used
-with other libraries that use the same representation, like
-[microlens](https://hackage.haskell.org/package/microlens).
-
-In this post I'll go over some of the features and provide examples of using
-them.
-
-### Quick note (migration)
-
-In case you were already using the library, there are some breaking changes in `0.5.0.0`.
-Namely, all the `Has*` classes have been extended from 3 type parameters to 5.
-Auxiliary constraint synonyms are provided, and migration should be relatively simple:
-
-{% highlight haskell %}
-f :: HasField field a record => ...
-{% endhighlight %}
-becomes
-{% highlight haskell %}
-f :: HasField' field record a => ...
-{% endhighlight %}
-Notice the `'` at the end of the class name, and the swapping of the last two arguments.
-{: .notice}
+The [generic-lens](https://hackage.haskell.org/package/generic-lens) library
+provides utilities for deriving various optics for your datatypes,
+using `GHC.Generics`. In this post I'll go over some of the features and
+provide examples of using them.
 
 ## Overview
 Lenses have proven to be an exteremely powerful tool in the Haskell ecosystem.
-Traditionally, we use Template Haskell to generate them, which is a great tool,
-but has its limitations. For one, cross-compiling code that uses TH is
-non-trivial. Also, the generated functions pollute the namespace: they're
-always there, and we have to explicitly export/import them, which can be
-tedious. In contrast, `generic-lens` uses `GHC.Generics` to derive the lenses
-on the fly, only when they are needed. Extra care has been taken to keep type
+`generic-lens` uses `GHC.Generics` to derive lenses and prisms on the fly, only
+when they are needed. These optics are highly polymorphic, and can be used with
+all types that are of the right shape. Extra care has been taken to keep type
 errors readable.
 
 ### Examples
@@ -81,11 +57,6 @@ data Human a
     , age     :: Int
     , address :: String
     , other   :: a
-    }
-  | HumanNoAddress
-    { name  :: String
-    , age   :: Int
-    , other :: a
     } deriving (Generic, Show)
 {% endhighlight %}
 
@@ -98,25 +69,6 @@ We can access the `name` field:
 "John"
 {% endhighlight %}
 
-Notice that the `address` field is partial: it only appears in one of the
-constructors. If we try to access that field, we get a nice type error:
-
-{% highlight txt %}
->>> Human "John" 18 "London" True ^. field @"address"
-
-<interactive>:19:34: error:
-    • Not all constructors of the type Human Bool
-       contain a field named 'address'.
-      The offending constructors are:
-      • HumanNoAddress
-
-    • In the second argument of ‘(^.)’, namely ‘field @"address"’
-      In the expression:
-        Human "John" 18 "London" True ^. field @"address"
-      In an equation for ‘it’:
-          it = Human "John" 18 "London" True ^. field @"address"
-{% endhighlight %}
-
 We can update fields too, even changing types where possible (when the type of
 the field is a type parameter of the datatype):
 
@@ -124,6 +76,10 @@ the field is a type parameter of the datatype):
 >>> Human "John" 18 "London" True & field @"other" %~ show
 Human {name = "John", age = 18, address = "London", other = "True"}
 {% endhighlight %}
+
+In case of sum types, it only makes sense to have a lens on the fields that
+appear in every constructor. Trying to use `field` to get a lens for a partial
+field is a type error.
 
 Note that the `field` lens works with `DuplicateRecordFields`, which means that
 record fields can actually be shared, and we can get a reusuble lens for all
@@ -273,4 +229,20 @@ inspect the generated core after every single commit. The tests can be found
 It's important to mention that as of this release, only the lenses are
 optimised away completely, the prisms still have some leftover overhead. This
 is planned to be fixed in a future release.
+{: .notice}
+
+## Quick note (migration)
+
+In case you were already using the library, there are some breaking changes in `0.5.0.0`.
+Namely, all the `Has*` classes have been extended from 3 type parameters to 5.
+Auxiliary constraint synonyms are provided, and migration should be relatively simple:
+
+{% highlight haskell %}
+f :: HasField field a record => ...
+{% endhighlight %}
+becomes
+{% highlight haskell %}
+f :: HasField' field record a => ...
+{% endhighlight %}
+Notice the `'` at the end of the class name, and the swapping of the last two arguments.
 {: .notice}
