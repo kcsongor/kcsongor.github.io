@@ -246,3 +246,6 @@ f :: HasField' field record a => ...
 {% endhighlight %}
 Notice the `'` at the end of the class name, and the swapping of the last two arguments.
 {: .notice}
+
+## Acknowledgements
+Thanks to Matthew Pickering for useful comments on a draft of this post.
