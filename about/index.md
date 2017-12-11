@@ -79,3 +79,8 @@ Written with a group of 4, in about 3 weeks.
 
 #### Others
 My other projects can be found on my [github](https://github.com/kcsongor)
+
+### Work experience
+- Habito -- 2017, London, UK
+- GSA Capital -- 2016, London, UK
+- Netcraft -- 2015, Bath, UK
