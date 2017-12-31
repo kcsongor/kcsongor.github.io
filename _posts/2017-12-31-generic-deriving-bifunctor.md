@@ -257,4 +257,4 @@ elaborate extra machinery, there is no need for incoherent instance
 resolution).
 
 It would be interesting to see how far this can be pushed before hitting a
-roadlbock that would truly require a bespoke `GenericN` representation.
+roadblock that would truly require a bespoke `GenericN` representation.
