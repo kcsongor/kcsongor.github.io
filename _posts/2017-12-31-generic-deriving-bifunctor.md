@@ -20,7 +20,7 @@ comments: true
 Recently, I've been experimenting with deriving various type class instances
 generically, and seeing how far we can go before having to resort to
 TemplateHaskell.  This post is a showcase of one such experiment: deriving
-[Bifunctor](hackage.haskell.org/package/bifunctors), a type class that ranges
+[Bifunctor](https://hackage.haskell.org/package/bifunctors), a type class that ranges
 over types of kind `* -> * -> *`, something `GHC.Generics` is known not to be
 well suited for. The accompanying source code can be found in [this gist](https://gist.github.com/kcsongor/a8cb718f676c6ca1d999bfc56def9b7b).
 
