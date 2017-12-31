@@ -2,7 +2,7 @@
 layout: post
 title: Announcing generic-lens 0.5.0.0
 excerpt: Deriving lenses generically
-modified: 2017-10-10
+modified: 2017-12-10
 tags: [haskell, generic-lens, generics, lens]
 comments: true
 ---
