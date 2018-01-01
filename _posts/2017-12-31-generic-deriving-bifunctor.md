@@ -2,7 +2,7 @@
 layout: post
 title: Deriving Bifunctor with Generics
 excerpt: A techinque for approximating Generic2 with only the Generic type class.
-modified: 2017-12-31
+modified: 2018-01-01
 tags: [haskell, generics, deriving]
 comments: true
 ---
@@ -232,7 +232,16 @@ instance {-# INCOHERENT #-} Functor f
 instance {-# INCOHERENT #-} Functor f
   => GBifunctor (Rec0 (f a)) (Rec0 (f b)) a b c d where
   gbimap f _ (K1 a) = K1 (fmap f a)
+
+instance {-# INCOHERENT #-} Bifunctor f
+  => GBifunctor (Rec0 (f a a)) (Rec0 (f b b)) a b c d where
+  gbimap f _ (K1 a) = K1 (bimap f f a)
+
+instance {-# INCOHERENT #-} Bifunctor f
+  => GBifunctor (Rec0 (f c c)) (Rec0 (f d d)) a b c d where
+  gbimap _ g (K1 b) = K1 (bimap g g b)
 {% endhighlight %}
+
 
 Now we can derive even more interesting `Bifunctor` instances.
 
@@ -258,3 +267,7 @@ resolution).
 
 It would be interesting to see how far this can be pushed before hitting a
 roadblock that would truly require a bespoke `GenericN` representation.
+
+## Acknowledgements
+
+Thanks to [@adituv](https://github.com/adituv) for pointing out that two instances were missing.
