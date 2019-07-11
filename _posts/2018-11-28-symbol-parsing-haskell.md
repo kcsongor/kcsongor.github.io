@@ -1,7 +1,7 @@
 ---
 layout: post
 title: Parsing type-level strings in Haskell
-excerpt: "A technique for manipulating Symbols in GHC for type-level programming"
+excerpt: "A technique for manipulating Symbols in GHC for type-level programming."
 modified: 2018-11-28
 tags: [haskell, parsing, type-level]
 comments: true
