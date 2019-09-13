@@ -37,7 +37,7 @@ this is a number: -9.
                    ^
 {% endhighlight %}
 
-Hexidecimal and binary numbers are supported too.
+Hexadecimal and binary numbers are supported too.
 For example, to convert `192` to hex, we can do
 
 {% highlight text %}
