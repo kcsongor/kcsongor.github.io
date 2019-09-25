@@ -7,15 +7,7 @@ tags: [haskell, parsing, type-level]
 comments: true
 ---
 
-<section id="table-of-contents" class="toc">
-  <header>
-    <h3>Overview</h3>
-  </header>
-<div id="drawer" markdown="1">
-*  Auto generated table of contents
-{:toc}
-</div>
-</section><!-- /#table-of-contents -->
+{% include _toc.html %}
 
 Haskell, as implemented in GHC, has a very rich language for expressing computations in types. Thanks to the
 [DataKinds](https://downloads.haskell.org/~ghc/latest/docs/html/users_guide/glasgow_exts.html?highlight=datakinds#datatype-promotion)

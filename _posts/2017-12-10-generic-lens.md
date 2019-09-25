@@ -7,15 +7,7 @@ tags: [haskell, generic-lens, generics, lens]
 comments: true
 ---
 
-<section id="table-of-contents" class="toc">
-  <header>
-    <h3>Contents</h3>
-  </header>
-<div id="drawer" markdown="1">
-*  Auto generated table of contents
-{:toc}
-</div>
-</section><!-- /#table-of-contents -->
+{% include _toc.html %}
 
 The [generic-lens](https://hackage.haskell.org/package/generic-lens) library
 provides utilities for deriving various optics for your datatypes,

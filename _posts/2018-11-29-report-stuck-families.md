@@ -7,15 +7,7 @@ tags: [haskell, type-level, type families, errors]
 comments: true
 ---
 
-<section id="table-of-contents" class="toc">
-  <header>
-    <h3>Overview</h3>
-  </header>
-<div id="drawer" markdown="1">
-*  Auto generated table of contents
-{:toc}
-</div>
-</section><!-- /#table-of-contents -->
+{% include _toc.html %}
 
 Custom type errors are a great way to improve the usability of Haskell
 libraries that utilise some of the more recent language extensions.
