@@ -305,7 +305,7 @@ type Chars
 {% endhighlight %}
 
 (I generated this structure with the help of other type families, but
-found that inlining the result into the source file results in must
+found that inlining the result into the source file results in much
 faster lookups.)
 
 Note that each node contains two consecutive characters: this is so
