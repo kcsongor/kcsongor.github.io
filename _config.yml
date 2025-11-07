@@ -28,34 +28,14 @@ kramdown:
 owner:
   name: Csongor Kiss
   avatar: "https://avatars0.githubusercontent.com/u/313596?v=3&s=460"
-  bio: "I write here once every 2 years"
+  bio: "I write here once every 5 years"
   email:
   disqus-shortname:
   twitter: lowert #username
-  facebook: #username
   google:
-    plus: CsongorKiss #username
     analytics: 'UA-10056882-11'
-    verify:
-    ad-client:
-    ad-slot:
-  bing-verify:
   github: kcsongor #username
-  stackoverflow: #123456/username   from a "http://stackoverflow.com/users/123456/username" link
   linkedin: csongorkiss #username
-  xing: #username
-  instagram: #username
-  lastfm: #username
-  tumblr: #username
-  pinterest: #username
-  foursquare: #username
-  steam: #username
-  dribbble: #username
-  youtube: lowertz #username
-  soundcloud: #username
-  weibo: #username
-  flickr: #username
-  codepen: #username
 
 include: [".htaccess"]
 exclude: ["lib", "config.rb", "Capfile", "config", "log", "Rakefile", "Rakefile.rb", "tmp", "less", "*.sublime-project", "*.sublime-workspace", "test", "spec", "Gruntfile.js", "package.json", "node_modules", "Gemfile", "Gemfile.lock", "LICENSE", "README.md"]
