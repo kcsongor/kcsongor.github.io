@@ -16,7 +16,7 @@ This post might look like a departure from my usual (in the sense of _typical_,
 not _frequent_) Haskell posts since we'll be writing Rust today. Don’t let that
 fool you; we’ll just be writing Haskell in Rust.
 
-GADTs (generalised algebraic data types) are a Haskell feature that let
+GADTs are a Haskell feature that let
 constructors carry richer type information. They can enforce constraints or
 refine type parameters per constructor -- which is what we'll achieve here in
 Rust.
