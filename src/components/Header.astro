@@ -1,0 +1,21 @@
+---
+import IconSunHigh from "@/assets/icons/IconSunHigh.svg";
+import IconMoon from "@/assets/icons/IconMoon.svg";
+import IconSearch from "@/assets/icons/IconSearch.svg";
+import config from "@/config";
+---
+<a href="#main-content" class="bg-background text-accent absolute -top-full left-4 z-50 p-3 focus:top-4">Skip to content</a>
+<header class="app-layout site-header">
+  <div class="border-border flex flex-wrap items-center justify-between gap-4 border-b py-6">
+    <a href="/" class="site-name text-xl font-medium tracking-tight">{config.site.title}</a>
+    <nav aria-label="Main navigation" class="site-nav">
+      <a href="/posts/" aria-current={Astro.url.pathname.startsWith("/posts/") ? "page" : undefined}>Posts</a>
+      <a href="/tags/" aria-current={Astro.url.pathname.startsWith("/tags/") ? "page" : undefined}>Tags</a>
+      <a href="/search/" aria-label="Search posts" title="Search posts" class="nav-icon"><IconSearch class="size-4" /></a>
+      <button id="theme-btn" type="button" aria-label="Toggle colour theme" class="nav-icon">
+        <IconSunHigh class="hidden size-4 dark:block" />
+        <IconMoon class="size-4 dark:hidden" />
+      </button>
+    </nav>
+  </div>
+</header>

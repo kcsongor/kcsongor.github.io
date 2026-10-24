@@ -1,0 +1,50 @@
+---
+import { cacheLines, plotPath } from "./cache-lines.mjs";
+const initialFields = 8;
+const initial = cacheLines(256, initialFields);
+---
+<cache-line-chart class="interactive-figure not-prose block">
+  <figure>
+    <figcaption class="mb-4 font-semibold">Reading one field: AoS vs SoA</figcaption>
+    <label class="flex flex-wrap items-center gap-3 text-sm">
+      Fields per record
+      <input data-fields type="range" min="2" max="16" step="1" value={initialFields} disabled class="accent-figure-accent" />
+      <output data-fields-output>{initialFields}</output>
+    </label>
+    <svg viewBox="0 0 640 300" role="img" aria-label="Distinct cache lines touched as record count increases, comparing array of structures with structure of arrays" class="mt-5 block w-full">
+      <path d="M48 26V250H608" fill="none" stroke="currentColor" opacity="0.35" />
+      {[0, 64, 128, 192, 256].map(value => <>
+        <text x={48 + value / 256 * 560} y="274" text-anchor="middle" fill="currentColor" font-size="12">{value}</text>
+        <text x="40" y={254 - value / 256 * 224} text-anchor="end" fill="currentColor" font-size="12">{value}</text>
+      </>)}
+      <text x="328" y="296" text-anchor="middle" fill="currentColor" font-size="12">Records</text>
+      <text x="48" y="14" fill="currentColor" font-size="12">Cache lines</text>
+      <path data-aos d={plotPath(initialFields, "aos")} fill="none" stroke="var(--figure-accent)" stroke-width="2.5" />
+      <path d={plotPath(initialFields, "soa")} fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="6 4" />
+    </svg>
+    <p data-summary aria-live="polite" class="mt-3 text-sm">At 256 records: AoS touches {initial.aos} cache lines; SoA touches {initial.soa}.</p>
+    <p class="text-muted-foreground mt-2 text-xs leading-5">Solid: array of structures. Dashed: structure of arrays. Four-byte fields, 64-byte cache lines, aligned arrays, cold cache. Counts distinct lines containing the requested field; this is not a timing model.</p>
+    <noscript><p class="mt-2 text-sm">Enable JavaScript to adjust the field count.</p></noscript>
+  </figure>
+</cache-line-chart>
+<script>
+  import { cacheLines, plotPath } from "./cache-lines.mjs";
+  class CacheLineChart extends HTMLElement {
+    connectedCallback() {
+      const input = this.querySelector<HTMLInputElement>("[data-fields]");
+      const output = this.querySelector<HTMLOutputElement>("[data-fields-output]");
+      const path = this.querySelector<SVGPathElement>("[data-aos]");
+      const summary = this.querySelector<HTMLElement>("[data-summary]");
+      if (!input || !output || !path || !summary) return;
+      input.disabled = false;
+      input.oninput = () => {
+        const fields = Number(input.value);
+        const counts = cacheLines(256, fields);
+        output.value = String(fields);
+        path.setAttribute("d", plotPath(fields, "aos"));
+        summary.textContent = `At 256 records: AoS touches ${counts.aos} cache lines; SoA touches ${counts.soa}.`;
+      };
+    }
+  }
+  if (!customElements.get("cache-line-chart")) customElements.define("cache-line-chart", CacheLineChart);
+</script>

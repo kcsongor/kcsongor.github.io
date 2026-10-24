@@ -1,0 +1,285 @@
+{
+  "time-travel-in-haskell-for-dummies": [
+    {
+      "id": "how",
+      "text": "How?"
+    },
+    {
+      "id": "the-repmax-problem",
+      "text": "The repMax problem"
+    },
+    {
+      "id": "wait-what",
+      "text": "Wait, what?"
+    },
+    {
+      "id": "states-travelling-back-in-time",
+      "text": "States travelling back in time"
+    },
+    {
+      "id": "what-are-states-anyway",
+      "text": "What are states anyway?"
+    },
+    {
+      "id": "finally-the-time-machine-tardis",
+      "text": "Finally, the time machine, TARDIS"
+    },
+    {
+      "id": "a-single-pass-assembler-an-example",
+      "text": "A single-pass assembler: an example"
+    },
+    {
+      "id": "io-doesnt-mix-with-the-future-the-past-is-fine",
+      "text": "IO doesn’t mix with the future! (The past is fine)"
+    },
+    {
+      "id": "thanks",
+      "text": "Thanks"
+    }
+  ],
+  "purescript-safe-printf": [
+    {
+      "id": "the-problem",
+      "text": "The problem"
+    },
+    {
+      "id": "type-level-parsing",
+      "text": "Type-level parsing"
+    },
+    {
+      "id": "how-the-sausage-gets-made-computing-the-output-type",
+      "text": "How the sausage gets made: computing the output type"
+    },
+    {
+      "id": "conclusion",
+      "text": "Conclusion"
+    }
+  ],
+  "generic-lens": [
+    {
+      "id": "overview",
+      "text": "Overview"
+    },
+    {
+      "id": "examples",
+      "text": "Examples"
+    },
+    {
+      "id": "field",
+      "text": "field"
+    },
+    {
+      "id": "typed",
+      "text": "typed"
+    },
+    {
+      "id": "position",
+      "text": "position"
+    },
+    {
+      "id": "super-row-polymorphism",
+      "text": "super (row polymorphism)"
+    },
+    {
+      "id": "_ctor",
+      "text": "_Ctor"
+    },
+    {
+      "id": "mtl",
+      "text": "mtl"
+    },
+    {
+      "id": "performance",
+      "text": "Performance"
+    },
+    {
+      "id": "quick-note-migration",
+      "text": "Quick note (migration)"
+    },
+    {
+      "id": "acknowledgements",
+      "text": "Acknowledgements"
+    }
+  ],
+  "generic-deriving-bifunctor": [
+    {
+      "id": "the-problem",
+      "text": "The problem"
+    },
+    {
+      "id": "the-solution",
+      "text": "The solution"
+    },
+    {
+      "id": "the-boring-instances",
+      "text": "The boring instances"
+    },
+    {
+      "id": "incoherent-instances",
+      "text": "Incoherent instances"
+    },
+    {
+      "id": "default-signatures",
+      "text": "Default signatures"
+    },
+    {
+      "id": "a-few-more-instances",
+      "text": "A few more instances"
+    },
+    {
+      "id": "conclusion",
+      "text": "Conclusion"
+    },
+    {
+      "id": "acknowledgements",
+      "text": "Acknowledgements"
+    }
+  ],
+  "symbol-parsing-haskell": [
+    {
+      "id": "motivation",
+      "text": "Motivation"
+    },
+    {
+      "id": "primitives",
+      "text": "Primitives"
+    },
+    {
+      "id": "appendsymbol",
+      "text": "AppendSymbol"
+    },
+    {
+      "id": "cmpsymbol",
+      "text": "CmpSymbol"
+    },
+    {
+      "id": "decomposition",
+      "text": "Decomposition"
+    },
+    {
+      "id": "head",
+      "text": "Head"
+    },
+    {
+      "id": "uncons",
+      "text": "Uncons"
+    },
+    {
+      "id": "conclusion",
+      "text": "Conclusion"
+    }
+  ],
+  "report-stuck-families": [
+    {
+      "id": "type-family-evaluation-semantics",
+      "text": "Type family evaluation semantics"
+    },
+    {
+      "id": "custom-type-errors",
+      "text": "Custom type errors"
+    },
+    {
+      "id": "conclusion",
+      "text": "Conclusion"
+    }
+  ],
+  "global-implicit-parameters": [
+    {
+      "id": "under-the-hood",
+      "text": "Under the hood"
+    },
+    {
+      "id": "barewords",
+      "text": "Barewords"
+    }
+  ],
+  "underrated-vim-c-a": [],
+  "ambiguous-tags": [
+    {
+      "id": "an-ambiguous-smart-constructor",
+      "text": "An ambiguous smart constructor"
+    }
+  ],
+  "opaque-constraint-synonyms": [
+    {
+      "id": "constraints-newtypes-kind-of",
+      "text": "Constraints newtypes (kind of)"
+    },
+    {
+      "id": "a-real-world-example",
+      "text": "A real world example"
+    },
+    {
+      "id": "acknowledgements",
+      "text": "Acknowledgements"
+    }
+  ],
+  "generic-lens-2": [
+    {
+      "id": "background",
+      "text": "Background"
+    },
+    {
+      "id": "examples",
+      "text": "Examples"
+    },
+    {
+      "id": "differences",
+      "text": "Differences"
+    },
+    {
+      "id": "labels",
+      "text": "Labels"
+    },
+    {
+      "id": "changes-in-generic-lens",
+      "text": "Changes in generic-lens"
+    },
+    {
+      "id": "conclusion",
+      "text": "Conclusion"
+    }
+  ],
+  "gadts-in-rust": [
+    {
+      "id": "a-simple-expression-language",
+      "text": "A simple expression language"
+    },
+    {
+      "id": "more-precise-types-with-gadts",
+      "text": "More precise types with GADTs"
+    },
+    {
+      "id": "more-flexible-types-with-gadts",
+      "text": "More flexible types with GADTs"
+    },
+    {
+      "id": "encoding-gadts-in-rust",
+      "text": "Encoding GADTs in Rust"
+    },
+    {
+      "id": "type-equality-witnesses",
+      "text": "Type equality witnesses"
+    },
+    {
+      "id": "trait-constraint-witnesses",
+      "text": "Trait constraint witnesses"
+    },
+    {
+      "id": "using-specialisation-to-recover-constraints",
+      "text": "Using specialisation to recover constraints"
+    },
+    {
+      "id": "why-this-works",
+      "text": "Why this works"
+    },
+    {
+      "id": "limitations",
+      "text": "Limitations"
+    },
+    {
+      "id": "conclusion",
+      "text": "Conclusion"
+    }
+  ]
+}

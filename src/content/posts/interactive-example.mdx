@@ -1,0 +1,35 @@
+---
+title: "Interactive figures and Cachet highlighting"
+description: "A private authoring example: custom syntax highlighting and an interactive cache-line graph."
+pubDatetime: 2026-10-24T00:00:00Z
+tags: [cachet, examples]
+draft: true
+---
+
+import CacheLineChart from '../../components/figures/CacheLineChart.astro';
+
+This draft is visible in the development server and excluded from production.
+It demonstrates the two building blocks for future articles.
+
+## Custom syntax highlighting
+
+Fenced code blocks marked `cachet` use the grammar in
+`src/syntax/cachet.tmLanguage.json`. It recognises lexical syntax; it does not
+resolve names or infer types.
+
+```cachet
+// A small function declaration.
+fn square : (x: Nat) -> Nat {
+  x * x
+}
+```
+
+## Interactive figures
+
+Move the slider to change how much unrelated data sits between consecutive
+values when reading one field from every record.
+
+<CacheLineChart />
+
+The figure is an Astro component with a small browser script. Its initial graph
+is rendered to HTML and SVG during the build. No backend is needed.

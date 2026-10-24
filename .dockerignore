@@ -1,0 +1,15 @@
+.git
+node_modules
+dist
+.astro
+_site
+public/pagefind
+.sass-cache
+gadts
+.claude
+.codex
+.agents
+.aws
+.env
+.env.*
+.DS_Store

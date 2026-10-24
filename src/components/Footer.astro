@@ -1,0 +1,14 @@
+---
+import type { HTMLAttributes } from "astro/types";
+type Props = { noMarginTop?: boolean } & HTMLAttributes<"footer">;
+const { noMarginTop = false, class: className, ...attrs } = Astro.props;
+---
+<footer class:list={["app-layout site-footer", { "mt-auto": !noMarginTop }, className]} {...attrs}>
+  <div class="border-border text-muted-foreground mt-12 flex flex-wrap items-center justify-between gap-4 border-t py-6 text-sm">
+    <span>Csongor Kiss</span>
+    <div class="flex gap-5">
+      <a href="https://github.com/kcsongor" class="hover:text-accent">GitHub</a>
+      <a href="/feed.xml" class="hover:text-accent">Feed</a>
+    </div>
+  </div>
+</footer>

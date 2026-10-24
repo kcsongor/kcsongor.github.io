@@ -1,0 +1,32 @@
+/* IBM Plex variable fonts, distributed under the SIL Open Font License. */
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/plex-sans.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/plex-sans-italic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 100 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/fonts/plex-mono.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/fonts/plex-mono-italic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 100 700;
+  font-display: swap;
+}

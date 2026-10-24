@@ -1,0 +1,33 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import { getSortedPosts } from "@/utils/getSortedPosts";
+import { getPostUrl } from "@/utils/getPostPaths";
+const posts = getSortedPosts(await getCollection("posts"));
+const years = [...new Set(posts.map(post => post.data.pubDatetime.getUTCFullYear()))];
+---
+<Layout>
+  <Header />
+  <main id="main-content" class="app-layout pb-8">
+    <h1 class="sr-only">Blog posts</h1>
+    {years.map(year => (
+      <section class="post-year" aria-labelledby={`year-${year}`}>
+        <h2 id={`year-${year}`} class="text-muted-foreground text-sm">{year}</h2>
+        <ul class="post-index">
+          {posts.filter(post => post.data.pubDatetime.getUTCFullYear() === year).map(post => (
+            <li>
+              <h3 class="text-foreground text-lg font-medium leading-7">
+                <a href={getPostUrl(post.id, post.filePath)} class="post-title-link">{post.data.title}</a>
+                {post.data.draft && <span class="draft-label">Draft</span>}
+              </h3>
+              <p class="post-description">{post.data.description}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))}
+  </main>
+  <Footer />
+</Layout>

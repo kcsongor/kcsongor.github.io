@@ -1,0 +1,27 @@
+---
+type Heading = { depth: number; slug: string; text: string };
+type Props = { headings: Heading[] };
+const { headings } = Astro.props;
+---
+{headings.length > 0 && <>
+  <details class="post-contents-mobile" data-mobile-contents>
+    <summary>Contents</summary>
+    <nav aria-label="Table of contents">
+      <ul>
+        {headings.map(heading => <li class:list={{ "contents-subsection": heading.depth === 3 }}>
+          <a href={`#${encodeURIComponent(heading.slug)}`} data-section={heading.slug}>{heading.text}</a>
+        </li>)}
+      </ul>
+    </nav>
+  </details>
+  <aside class="post-contents-sidebar">
+    <nav aria-label="Table of contents" class="post-contents-sticky" data-contents-sidebar>
+      <h2>Contents</h2>
+      <ul>
+        {headings.map(heading => <li class:list={{ "contents-subsection": heading.depth === 3 }}>
+          <a href={`#${encodeURIComponent(heading.slug)}`} data-section={heading.slug}>{heading.text}</a>
+        </li>)}
+      </ul>
+    </nav>
+  </aside>
+</>}

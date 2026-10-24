@@ -1,0 +1,42 @@
+@import "tailwindcss";
+@import "./fonts.css";
+@import "./theme.css";
+@import "./typography.css";
+@import "./custom.css";
+@import "rehype-callouts/theme/obsidian";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@layer base {
+  * {
+    @apply border-border outline-accent/75;
+    scrollbar-width: auto;
+    scrollbar-color: var(--color-muted) transparent;
+  }
+  a,
+  button,
+  #main-content {
+    @apply outline-accent outline-offset-4 focus-visible:no-underline focus-visible:outline-2 focus-visible:outline-solid;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@utility max-w-app {
+  max-width: var(--layout-width);
+}
+
+@utility app-layout {
+  @apply max-w-app mx-auto w-full px-4;
+}
+
+@utility active-nav {
+  @apply font-semibold;
+}
+
+:target {
+  scroll-margin-block: 1rem;
+}
+

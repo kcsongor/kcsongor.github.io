@@ -1,0 +1,88 @@
+{
+  "name": "cachet",
+  "displayName": "Cachet",
+  "scopeName": "source.cachet",
+  "fileTypes": [
+    "cachet"
+  ],
+  "patterns": [
+    {
+      "name": "comment.line.double-slash.cachet",
+      "begin": "//",
+      "end": "$"
+    },
+    {
+      "name": "string.quoted.double.cachet",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.cachet",
+          "match": "\\\\."
+        },
+        {
+          "name": "meta.interpolation.cachet",
+          "begin": "\\{",
+          "end": "\\}",
+          "patterns": [
+            {
+              "include": "#braces"
+            },
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z_0-9]*)",
+      "captures": {
+        "1": {
+          "name": "storage.type.function.cachet"
+        },
+        "2": {
+          "name": "entity.name.function.cachet"
+        }
+      }
+    },
+    {
+      "name": "keyword.control.cachet",
+      "match": "\\b(?:admitted|allocate|apart|as|at|await|big_sep|borrows|break|by|by_compiler|by_target|capability|carries|case|const|consume|consumes|continue|deriving|else|ensures|enum|exists|export|fits|fn|for|forall|from|if|impl|import|in|into|invariant|is|layout|let|like|linear|load|match|maximize|minimize|module|movement|opaque|open|peak|performance|predicate|private|produce|produces|proof|pull|reads|require|resource|return|rowrec|seal|sealed|spawn|state|static_assert|struct|synth|tasks|through|traffic|trait|transition|trust_me|type|under|use|view|where|with|witness|witnesses|working_set|writes)\\b"
+    },
+    {
+      "name": "constant.language.cachet",
+      "match": "\\b(?:true|false)\\b"
+    },
+    {
+      "name": "constant.numeric.cachet",
+      "match": "\\b[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\\b"
+    },
+    {
+      "name": "entity.name.type.cachet",
+      "match": "\\b[A-Z][A-Za-z_0-9]*\\b"
+    },
+    {
+      "name": "keyword.operator.cachet",
+      "match": "[-+*/%=!<>&|^~?:]+"
+    },
+    {
+      "name": "punctuation.section.cachet",
+      "match": "[{}()\\[\\],.;]"
+    }
+  ],
+  "repository": {
+    "braces": {
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [
+        {
+          "include": "#braces"
+        },
+        {
+          "include": "$self"
+        }
+      ]
+    }
+  }
+}
