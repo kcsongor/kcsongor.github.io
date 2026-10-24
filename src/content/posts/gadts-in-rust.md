@@ -354,7 +354,7 @@ fn can_add<T: std::ops::Add<Output = T>>() -> CanAdd<T> {
 ```
 
 `CanAdd<T>` can only be constructed (via `can_add`) if `T` supports the `Add` operation
-with result type `T`. This mirrors the `Num a =>` constraint on the Haskell side.
+with result type `T`. This mirrors the `Num a =>{:haskell}` constraint on the Haskell side.
 
 We can now extend our expression type with a constructor that carries this
 constraint witness:

@@ -13,8 +13,8 @@ It demonstrates the two building blocks for future articles.
 
 ## Custom syntax highlighting
 
-Fenced code blocks marked `cachet` use the grammar in
-`src/syntax/cachet.tmLanguage.json`. It recognises lexical syntax; it does not
+Fenced code blocks marked `cachet{:text}` use the grammar in
+`src/syntax/cachet.tmLanguage.json{:text}`. It recognises lexical syntax; it does not
 resolve names or infer types.
 
 ```cachet
@@ -23,6 +23,8 @@ fn square : (x: Nat) -> Nat {
   x * x
 }
 ```
+
+Inline code such as `fn square : (x: Nat) -> Nat` uses the same grammar and colours.
 
 ## Interactive figures
 

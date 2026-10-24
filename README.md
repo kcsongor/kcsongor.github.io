@@ -128,6 +128,15 @@ Shiki also supports `// [!code highlight]`, `// [!code ++]` and `// [!code --]`
 annotations for highlighted lines and diffs. Code-fence metadata such as
 `file="example.cachet"` adds a filename label. Highlighting runs at build time.
 
+Inline code is highlighted too, using the first programming-language fence until
+another fence changes the language. Plain-text/output fences do not change it.
+Set `inlineCodeLanguage: haskell` in frontmatter to use one language throughout
+the post (also useful for posts without fences). Override individual snippets
+with an annotation **inside** the backticks: `` `Num a =>{:haskell}` `` or
+`` `CanAdd<T>{:rust}` ``. Use `` `path/to/file{:text}` `` to leave a snippet plain.
+The annotations are removed from rendered text, headings, and copied snippets.
+Inline tokens use the same light/dark colours, bold, and italic styling as blocks.
+
 ## Interactive figures
 
 Use `.mdx` when a post needs a component:

@@ -41,15 +41,21 @@ pre, code, kbd, samp { font-family: var(--font-code); font-variant-ligatures: no
 }
 
 /* Shiki emits font styling per theme as well as token colours. */
-.astro-code span {
+:is(.astro-code, .shiki-inline) span {
   font-style: var(--shiki-light-font-style, inherit);
   font-weight: var(--shiki-light-font-weight, inherit);
   text-decoration: var(--shiki-light-text-decoration, inherit);
 }
-html[data-theme="dark"] .astro-code span {
+html[data-theme="dark"] :is(.astro-code, .shiki-inline) span {
   font-style: var(--shiki-dark-font-style, inherit);
   font-weight: var(--shiki-dark-font-weight, inherit);
   text-decoration: var(--shiki-dark-text-decoration, inherit);
+}
+.shiki-inline span {
+  color: var(--shiki-light, inherit);
+}
+html[data-theme="dark"] .shiki-inline span {
+  color: var(--shiki-dark, inherit);
 }
 #article .callout {
   border-color: var(--border);

@@ -18,6 +18,9 @@ import config from "./astro-paper.config";
 import cachet from "./src/syntax/cachet.tmLanguage.json";
 import { monochromeLight, monochromeDark } from "./src/syntax/monochrome";
 import { legacyHeadingAliases } from "./src/syntax/legacy-headings.mjs";
+import { remarkInlineCode, rehypeInlineCode } from "./src/syntax/inline-code.mjs";
+
+const syntaxThemes = { light: monochromeLight, dark: monochromeDark };
 
 export default defineConfig({
   site: config.site.url,
@@ -40,11 +43,16 @@ export default defineConfig({
   },
   markdown: {
     processor: unified({
-      rehypePlugins: [rehypeCallouts, legacyHeadingAliases],
+      remarkPlugins: [remarkInlineCode],
+      rehypePlugins: [
+        rehypeCallouts,
+        [rehypeInlineCode, { langs: [cachet], themes: syntaxThemes }],
+        legacyHeadingAliases,
+      ],
     }),
     shikiConfig: {
       langs: [cachet],
-      themes: { light: monochromeLight, dark: monochromeDark },
+      themes: syntaxThemes,
       defaultColor: false,
       wrap: false,
       transformers: [
