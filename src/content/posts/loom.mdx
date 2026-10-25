@@ -63,11 +63,13 @@ Next we'll look at Loom, and in particular how it *differs* from Move. These are
 
 Move disallows storing a `signer`, while Loom allows a resource to keep a `signer` after the transaction ends.
 
-```loom
-// Move: rejected, because signer cannot be stored
+```move
+// Rejected: signer cannot be stored
 struct Stash has key { s: signer }
+```
 
-// Loom: the signer can survive the transaction
+```loom
+// The signer can survive the transaction
 resource Stash { s: signer }
 move_to(to, Stash { s: s });
 ```
@@ -78,7 +80,7 @@ Note that the original Move signer is also quite dangerous, because even though
 a contract can't store it, it can still use it to call functions such as `transfer` during the transaction. Sui Move uses owned objects and the [capability pattern](https://github.com/sui-foundation/sui-move-intro-course/blob/main/unit-two/lessons/6_capability_design_pattern.md) to give contracts more limited authority.
 For example, to execute admin-only actions on a contract, the admin would own an object of type `AdminCap` (the admin capability) and pass that by reference to the gated functions:
 
-```loom
+```move label="Sui Move"
 public fun admin_only(admin_cap: &AdminCap) {
  // privileged action
 }

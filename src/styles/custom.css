@@ -161,6 +161,17 @@ nav[aria-label="breadcrumb"] :is(a, span) { opacity: 1; }
 #article a:not(.heading-link) { text-decoration-style: solid; text-decoration-color: var(--border); text-decoration-thickness: 1px; text-underline-offset: .2em; }
 #article a:not(.heading-link):hover { text-decoration-color: var(--foreground); }
 #article pre { margin-block: 1.75rem; border-radius: 0; padding: 1.75rem 1.25rem 1.25rem; line-height: 1.65; }
+#article pre.has-language-label { display: block; padding-top: .5rem; }
+#article .code-language-label {
+  display: block;
+  margin-bottom: .75rem;
+  padding-right: 3rem;
+  font: .6875rem/1.5 var(--font-code);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: normal;
+  opacity: .6;
+}
 .copy-code { top: .4rem; right: .5rem; border-color: transparent; border-radius: .2rem; line-height: 1.5; }
 .copy-code:hover { background: var(--muted); }
 #article .footnotes { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: .875em; }

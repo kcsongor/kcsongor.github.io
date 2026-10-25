@@ -14,6 +14,7 @@ import {
   transformerNotationWordHighlight,
 } from "@shikijs/transformers";
 import { transformerFileName } from "./src/utils/transformers/fileName";
+import { transformerLanguageLabel } from "./src/utils/transformers/languageLabel.mjs";
 import config from "./astro-paper.config";
 import cachet from "./src/syntax/cachet.tmLanguage.json";
 import loom from "./src/syntax/loom.tmLanguage.json";
@@ -61,6 +62,7 @@ export default defineConfig({
       wrap: false,
       transformers: [
         transformerFileName({ style: "v2", hideDot: false }),
+        transformerLanguageLabel(),
         transformerNotationHighlight(),
         transformerNotationWordHighlight(),
         transformerNotationDiff({ matchAlgorithm: "v3" }),
