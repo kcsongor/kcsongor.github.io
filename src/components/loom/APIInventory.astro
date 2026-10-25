@@ -1,0 +1,76 @@
+---
+import "./loom.css";
+import inventory from "../../data/loom/api-inventory.json";
+import SignatureBars from "./SignatureBars.astro";
+const featured = inventory.operations.filter(operation => ["Split", "Merge"].includes(operation.name));
+---
+<loom-api-inventory class="block">
+<figure class="loom-figure loom-api-inventory not-prose" data-authorship="ai">
+  <div class="loom-api-operations" id="loom-api-operations">
+    {inventory.operations.map(operation => <section data-extra={!featured.includes(operation) || undefined}>
+      <h3>{operation.name}</h3>
+      <SignatureBars variants={operation.variants.slice(0, 3)} total={inventory.runs} />
+      {operation.variants.length > 3 &&
+      <p class="loom-caption">{operation.variants.length - 3} more...</p>
+      }
+    </section>)}
+  </div>
+  <button class="loom-api-toggle" type="button" aria-expanded="true" aria-controls="loom-api-operations" hidden>
+    <span data-toggle-label>Show fewer operations</span><span class="loom-api-chevron" aria-hidden="true"></span>
+  </button>
+</figure>
+</loom-api-inventory>
+<script>
+  class LoomAPIInventory extends HTMLElement {
+    connectedCallback() {
+      if (this.dataset.ready) return;
+      this.dataset.ready = "true";
+      const toggle = this.querySelector<HTMLButtonElement>(".loom-api-toggle")!;
+      const label = toggle.querySelector<HTMLElement>("[data-toggle-label]")!;
+      const extra = this.querySelectorAll<HTMLElement>("[data-extra]");
+      const grid = this.querySelector<HTMLElement>(".loom-api-operations")!;
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let animation: Animation | undefined;
+      const setExpanded = (expanded: boolean, animate = true) => {
+        const start = grid.getBoundingClientRect().height;
+        animation?.cancel();
+        animation = undefined;
+        toggle.setAttribute("aria-expanded", String(expanded));
+        label.textContent = expanded ? "Show fewer operations" : "Show all API operations";
+        extra.forEach(section => { section.inert = !expanded; section.setAttribute("aria-hidden", String(!expanded)); });
+        const finish = () => {
+          extra.forEach(section => { section.hidden = !expanded; });
+          grid.style.height = "";
+          grid.style.overflow = "";
+        };
+        if (!animate || reducedMotion.matches) { finish(); return; }
+        grid.style.height = "";
+        extra.forEach(section => { section.hidden = false; });
+        const top = grid.getBoundingClientRect().top;
+        const end = expanded ? grid.getBoundingClientRect().height : Math.max(...[...grid.querySelectorAll<HTMLElement>("section:not([data-extra])")].map(section => section.getBoundingClientRect().bottom - top));
+        grid.style.height = `${start}px`;
+        grid.style.overflow = "clip";
+        animation = grid.animate([{ height: `${start}px` }, { height: `${end}px` }], { duration: 320, easing: "cubic-bezier(.22, 1, .36, 1)", fill: "forwards" });
+        const current = animation;
+        current.onfinish = () => { finish(); current.cancel(); animation = undefined; };
+      };
+      setExpanded(false, false);
+      toggle.hidden = false;
+      toggle.addEventListener("click", () => setExpanded(toggle.getAttribute("aria-expanded") !== "true"));
+    }
+  }
+  if (!customElements.get("loom-api-inventory")) customElements.define("loom-api-inventory", LoomAPIInventory);
+</script>
+<style>
+  .loom-api-inventory { border: 0; padding-block: 0; }
+  .loom-api-totals { font-size: .8125rem; font-variant-numeric: tabular-nums; }
+  .loom-api-totals strong { font-weight: 500; }
+  .loom-api-operations { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 2rem; margin-block: 1.5rem; align-items: start; align-content: start; }
+  #article .loom-api-operations h3 { margin: 0; font: 500 .875rem/1.5 var(--font-app); }
+  .loom-figure .loom-api-toggle { display: inline-flex; align-items: center; gap: .65rem; padding: .45rem 0; min-height: 2.5rem; border: 0; border-radius: 0; background: transparent; color: var(--muted-foreground); font: .75rem/1.5 var(--font-code); cursor: pointer; transition: color 150ms ease; }
+  .loom-figure .loom-api-toggle:hover { background: transparent; color: var(--foreground); }
+  .loom-api-chevron { width: .4rem; height: .4rem; border-right: 1px solid currentColor; border-bottom: 1px solid currentColor; transform: translateY(-.1rem) rotate(45deg); transition: transform 150ms ease; }
+  .loom-api-toggle[aria-expanded="true"] .loom-api-chevron { transform: translateY(.1rem) rotate(225deg); }
+  @media (prefers-reduced-motion: reduce) { .loom-figure .loom-api-toggle, .loom-api-chevron { transition: none; } }
+  @media (max-width: 600px) { .loom-api-operations { grid-template-columns: 1fr; } }
+</style>

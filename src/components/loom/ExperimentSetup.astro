@@ -1,0 +1,184 @@
+---
+import { Code } from "astro:components";
+import "./loom.css";
+import setup from "../../data/loom/setup.json";
+import { compiledContent as renderBrief } from "../../data/loom/brief.md";
+import { compiledContent as renderRunbook } from "../../data/loom/runbook.md";
+import { monochromeLight, monochromeDark } from "../../syntax/monochrome";
+const themes = { light: monochromeLight, dark: monochromeDark };
+const embedHandout = (html: string, prefix: string) => html
+  .replace(/(<\/?h)([12])(?=[\s>])/g, (_, tag, level) => `${tag}${Number(level) + 2}`)
+  .replace(/id="([^"]+)"/g, `id="${prefix}-$1"`)
+  .replace(/href="#([^"]+)"/g, `href="#${prefix}-$1"`)
+  .replace('href="docs/LANGUAGE.md"', 'href="#loom-language-spec" data-handout-link')
+  .replace('href="docs/RUNBOOK.md"', 'href="#loom-runbook" data-handout-link')
+  .replace('<a href="exercise/">exercise/</a>', '<code>exercise/</code>');
+const [brief, runbook] = await Promise.all([renderBrief(), renderRunbook()]);
+---
+<figure class="loom-figure loom-experiment-setup not-prose">
+  <section>
+    <h3>Baseline instruction</h3>
+    <Code code={setup.baseline.trimEnd()} lang="markdown" themes={themes} defaultColor={false} />
+    <loom-handouts class="loom-handouts">
+      <div class="loom-handout-cards" role="group" aria-label="Experiment handouts" data-handout-controls hidden>
+        <button type="button" class="loom-handout-card" id="loom-brief-toggle" aria-controls="loom-brief" aria-expanded="false">
+          <span class="loom-handout-name">BRIEF.md</span><span class="loom-handout-description">Task requirements and deliverables</span>
+        </button>
+        <button type="button" class="loom-handout-card" id="loom-runbook-toggle" aria-controls="loom-runbook" aria-expanded="false">
+          <span class="loom-handout-name">RUNBOOK.md</span><span class="loom-handout-description">Commands and transaction syntax</span>
+        </button>
+      </div>
+      <div class="loom-handout-body" data-handout-body>
+        <section class="loom-handout-content" id="loom-brief" aria-label="BRIEF.md" data-handout-panel set:html={embedHandout(brief, "handout-brief")} />
+        <section class="loom-handout-content" id="loom-runbook" aria-label="RUNBOOK.md" data-handout-panel set:html={embedHandout(runbook, "handout-runbook")} />
+      </div>
+    </loom-handouts>
+  </section>
+  <section>
+    <h3>Asking the agent to document its assumptions</h3>
+    <Code code={setup.assumptions.trimEnd()} lang="markdown" themes={themes} defaultColor={false} />
+  </section>
+</figure>
+
+<style>
+  .loom-experiment-setup {
+    border-block: 0;
+    padding-block: 0;
+  }
+  .loom-experiment-setup :global(pre) {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  h3 {
+    margin-block: 1.5rem .75rem;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  .loom-handouts {
+    display: block;
+    margin-block: 1rem 2rem;
+  }
+  .loom-handout-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+    align-items: stretch;
+  }
+  .loom-handout-card {
+    min-width: 0;
+    display: block;
+    margin: 0;
+    border: 1px solid var(--border);
+    padding: 1rem;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 0;
+  }
+  .loom-handout-card[aria-expanded="true"] {
+    position: relative;
+    z-index: 1;
+    border-bottom-color: var(--background);
+    background: var(--background);
+  }
+  .loom-handout-name {
+    font-weight: 500;
+    font-size: .875rem;
+  }
+  .loom-handout-description {
+    display: block;
+    margin-top: .4rem;
+    color: var(--muted-foreground);
+    font: .8125rem/1.5 var(--font-app);
+  }
+  .loom-handout-body { display: flow-root; margin-top: -1px; }
+  .loom-handout-content {
+    border: 1px solid var(--border);
+    background: var(--background);
+    padding: .25rem 1.25rem 1.25rem;
+    line-height: 1.75;
+  }
+  .loom-handout-content :global(p) {
+    display: block;
+    margin-block: 1rem;
+  }
+  .loom-handout-content :global(ul),
+  .loom-handout-content :global(ol) {
+    padding-inline-start: 1.5rem;
+  }
+  .loom-handout-content :global(ul) { list-style: disc; }
+  .loom-handout-content :global(ol) { list-style: decimal; }
+  .loom-handout-content :global(li) { margin-block: .5rem; }
+  .loom-handout-content :global(h3),
+  .loom-handout-content :global(h4) {
+    font-size: 1rem;
+    margin-block: 1.5rem .75rem;
+  }
+  .loom-handout-content :global(table) {
+    display: block;
+    overflow-x: auto;
+  }
+  .loom-handout-content :global(th),
+  .loom-handout-content :global(td) {
+    white-space: normal;
+  }
+  .loom-handout-content :global(hr) {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin-block: 1.5rem;
+  }
+  @media (max-width: 480px) {
+    .loom-handout-card { padding: .75rem; }
+  }
+</style>
+
+<script>
+  class LoomHandouts extends HTMLElement {
+    connectedCallback() {
+      if (this.dataset.ready) return;
+      this.dataset.ready = "true";
+      const buttons = [...this.querySelectorAll<HTMLButtonElement>("button[aria-controls]")];
+      const panels = [...this.querySelectorAll<HTMLElement>("[data-handout-panel]")];
+      const body = this.querySelector<HTMLElement>("[data-handout-body]")!;
+      let animation: Animation | undefined;
+      const show = (id: string | null, animate = true) => {
+        const start = body.getBoundingClientRect().height;
+        animation?.cancel();
+        animation = undefined;
+        buttons.forEach(button => button.setAttribute("aria-expanded", String(button.getAttribute("aria-controls") === id)));
+        panels.forEach(panel => { panel.inert = panel.id !== id; panel.setAttribute("aria-hidden", String(panel.id !== id)); });
+        const finish = () => {
+          panels.forEach(panel => { panel.hidden = panel.id !== id; });
+          body.style.height = "";
+          body.style.overflow = "";
+        };
+        if (!animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) { finish(); return; }
+        body.style.height = "";
+        // Keep the outgoing document visible while closing; switches show the new document.
+        if (id) panels.forEach(panel => { panel.hidden = panel.id !== id; });
+        const end = id ? body.getBoundingClientRect().height : 0;
+        body.style.height = `${start}px`;
+        body.style.overflow = "clip";
+        animation = body.animate([{ height: `${start}px` }, { height: `${end}px` }], { duration: 320, easing: "cubic-bezier(.22, 1, .36, 1)", fill: "forwards" });
+        const current = animation;
+        current.onfinish = () => { finish(); current.cancel(); animation = undefined; };
+      };
+      buttons.forEach(button => {
+        button.onclick = () => show(button.getAttribute("aria-expanded") === "true" ? null : button.getAttribute("aria-controls"));
+      });
+      const target = document.getElementById(location.hash.slice(1));
+      show(target?.closest<HTMLElement>("[data-handout-panel]")?.id ?? null, false);
+      this.querySelector<HTMLElement>("[data-handout-controls]")!.hidden = false;
+    }
+  }
+  if (!customElements.get("loom-handouts")) customElements.define("loom-handouts", LoomHandouts);
+
+  document.addEventListener("click", event => {
+    const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[data-handout-link]") : null;
+    if (!link) return;
+    const target = document.getElementById(link.hash.slice(1));
+    if (target instanceof HTMLDetailsElement) target.dispatchEvent(new Event("loom:expand"));
+    else if (target?.matches("[data-handout-panel]") && target.hidden) {
+      document.getElementById(`${target.id}-toggle`)?.click();
+    }
+  });
+</script>

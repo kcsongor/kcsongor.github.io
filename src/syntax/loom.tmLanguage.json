@@ -1,0 +1,22 @@
+{
+  "name": "loom",
+  "displayName": "Loom",
+  "scopeName": "source.loom",
+  "fileTypes": ["loom", "chain"],
+  "repository": {
+    "block-comment": { "name": "comment.block.loom", "begin": "/\\*", "end": "\\*/", "patterns": [{ "include": "#block-comment" }] }
+  },
+  "patterns": [
+    { "name": "comment.line.double-slash.loom", "begin": "//", "end": "$" },
+    { "include": "#block-comment" },
+    { "name": "string.quoted.double.loom", "begin": "\"", "end": "\"", "patterns": [{ "name": "constant.character.escape.loom", "match": "\\\\." }] },
+    { "name": "constant.other.address.loom", "match": "@[A-Za-z_][A-Za-z0-9_]*" },
+    { "name": "constant.numeric.loom", "match": "\\b[0-9]+\\b" },
+    { "name": "constant.language.loom", "match": "\\b(true|false)\\b" },
+    { "name": "keyword.control.loom", "match": "\\b(module|at|resource|struct|interface|implements|for|public|fn|let|if|else|call|mut|publish|tx|signed_by|using|has|key|store|abort)\\b" },
+    { "name": "support.function.loom", "match": "\\b(move_to|move_from|exists|addr_of|signer_of_self|assert|bind|panic|force|iface_id|borrow|borrow_mut|signer)\\b" },
+    { "name": "entity.name.type.loom", "match": "\\b(Self|Signer|u64|bool|address|[A-Z][A-Za-z0-9_]*)\\b" },
+    { "name": "keyword.operator.loom", "match": "::|=>|==|!=|<=|>=|&&|\\|\\||[+*/%=&!<>-]" },
+    { "name": "punctuation.loom", "match": "[{}()\\[\\],;:]" }
+  ]
+}

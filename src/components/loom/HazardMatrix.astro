@@ -1,0 +1,161 @@
+---
+import { averageMetrics } from "./averages.mjs";
+import { apiCost } from "./api-cost.mjs";
+import ApiCostNote from "./ApiCostNote.astro";
+import snapshot from "../../data/loom/results.json";
+import { buildHazardMatrix, recognitionSummary, modelName, metricLabel, roundingFixJudgments } from "./results.mjs";
+import "./loom.css";
+const groups = buildHazardMatrix(snapshot.rows);
+const efforts = ["all", "medium", "high", "xhigh", "max"];
+const hazards = ["Signer", "Dispatch", "Deferred", "Rounding"];
+const judgments = {
+  correct: { symbol: "✓", label: "Correct" },
+  partial: { symbol: "◐", label: "Partial" },
+  unstated: { symbol: "○", label: "Unstated" },
+  incorrect: { symbol: "×", label: "Incorrect" },
+  missing: { symbol: "—", label: "Not reviewed / missing" },
+};
+---
+<loom-hazard-matrix class="block">
+  <figure class="loom-figure loom-matrix not-prose">
+    <figcaption><span class="loom-kicker">Results</span>Recognition by model</figcaption>
+    <p class="loom-caption loom-comparison-intro">Compare <strong>baseline</strong> and <strong>assumptions</strong>. Expand a row for individual runs and rounding results.</p>
+    <div class="loom-comparison-tools">
+      <div class="loom-effort-filter" role="group" aria-label="Filter results by effort" hidden>
+        <span>Effort</span>
+        {efforts.map(effort => <button type="button" data-effort-filter={effort} aria-pressed={effort === "all" ? "true" : "false"}>{effort === "all" ? "All" : effort}</button>)}
+      </div>
+      <span class="loom-comparison-count" data-comparison-count aria-live="polite">{groups.length} configurations · {snapshot.rows.filter(row => row.reviewed && row.status === "completed").length} / {snapshot.rows.length} runs scored</span>
+    </div>
+    <div class="loom-comparison-scroll" tabindex="0" role="region" aria-label="Model comparison; scroll horizontally on small screens">
+      <table class="loom-comparison-table">
+        <caption class="sr-only">Runtime hazard recognition by model, effort and prompt. Percentages count full recognition only.</caption>
+        <colgroup><col class="loom-model-col" /><col /><col /></colgroup>
+        <thead><tr><th scope="col">Model / effort</th><th scope="col">Baseline</th><th scope="col">Assumptions</th></tr></thead>
+        {groups.map((group, groupIndex) => <tbody data-config data-model={group.model} data-effort={group.effort} data-reviewed={group.prompts.reduce((n,p) => n + p.reviewed,0)} data-attempts={group.prompts.reduce((n,p) => n + p.runs.length,0)} class:list={{"loom-model-start": groupIndex === 0 || groups[groupIndex - 1].model !== group.model}}>
+          <tr class="loom-comparison-row">
+            <th scope="row">
+              <span data-config-fallback>{modelName(group.model)}<small>{group.effort} effort</small></span>
+              <button type="button" class="loom-config-toggle" data-config-toggle aria-expanded="false" aria-controls={`loom-config-${groupIndex}`} hidden>
+                <span class="loom-config-chevron" aria-hidden="true">›</span>
+                <span>{modelName(group.model)}<small>{group.effort} effort</small></span>
+                <span class="sr-only"> — show individual runs</span>
+              </button>
+            </th>
+            {group.prompts.map(prompt => {
+              const score = recognitionSummary(prompt.runs);
+              const averages = averageMetrics(snapshot.rows.filter(row => row.model === group.model && row.effective_effort === group.effort && row.prompt_condition === prompt.prompt));
+              const description = `${modelName(group.model)}, ${group.effort}, ${prompt.prompt}: ${score.percent === null ? "no score" : `${Math.round(score.percent)}%`}; ${score.correct} of ${score.total} runtime hazard judgments fully correct; ${score.partial} partial, across ${score.runs} reviewed runs. Rounding is excluded. Average time: ${metricLabel(averages.time, "duration_seconds")} from ${averages.timeCount} runs.${averages.cost === null ? "" : ` Average estimated API cost: ${metricLabel(averages.cost, "api_cost_usd")} from ${averages.costCount} runs.`}`;
+              return <td class="loom-score-cell">
+                <div class="loom-score" role="img" aria-label={score.percent === null ? `${prompt.prompt}: no complete reviews` : description} title={description}>
+                  <div class="loom-score-label"><strong>{score.percent === null ? "—" : `${Math.round(score.percent)}%`}</strong><span class="loom-score-averages"><span>{averages.time === null ? "" : metricLabel(averages.time, "duration_seconds")}</span>{averages.cost !== null && <span>{metricLabel(averages.cost, "api_cost_usd")}</span>}</span></div>
+                  <div class:list={{"loom-score-track": true, "is-missing": score.percent === null}} aria-hidden="true">
+                    <span class="loom-score-full" style={`width: ${score.percent ?? 0}%`}></span><span class="loom-score-partial" style={`width: ${score.partialPercent}%`}></span>
+                  </div>
+                  <span class="loom-score-sample">{score.runs} {score.runs === 1 ? "run" : "runs"} · averages per run</span>
+                </div>
+              </td>;
+            })}
+          </tr>
+          <tr class="loom-detail-row" id={`loom-config-${groupIndex}`} data-detail-row><td colspan={3}>
+            <div class="loom-config-detail">
+              <div class="loom-detail-title">{modelName(group.model)} · {group.effort} effort <span>Individual attempts</span></div>
+              <div class="loom-matrix-legend" aria-label="Recognition labels">
+                {Object.entries(judgments).map(([key, judgment]) => <span><span class="loom-cell" data-judgment={key} aria-hidden="true">{judgment.symbol}</span>{judgment.label}</span>)}
+              </div>
+        <div class="loom-matrix-scroll" tabindex="0" role="region" aria-label={`${modelName(group.model)}, ${group.effort}: baseline and assumptions comparison`}>
+          <div class="loom-matrix-prompts">
+            {group.prompts.map(prompt => <table class="loom-matrix-table">
+              <caption><strong>{prompt.prompt === "baseline" ? "Baseline" : "Assumptions"}</strong><span>{prompt.reviewed} / {prompt.runs.length} scored</span></caption>
+              <thead><tr><th scope="col">Attempt</th>{hazards.map(hazard => <th scope="col">{hazard}</th>)}<th scope="col">Fix</th></tr></thead>
+              <tbody>
+                {prompt.runs.length === 0 && <tr><td colspan={hazards.length + 2} class="loom-matrix-empty">No attempts recorded</td></tr>}
+                {prompt.runs.map((run, index) => <tr data-matrix-run={run.id}>
+                  <th scope="row" title={`${run.label} · elapsed time: ${metricLabel(run.durationSeconds, "duration_seconds")}`}>
+                    {String(index + 1).padStart(2, "0")}
+                    {run.status !== "completed" && <span class="loom-run-time">{run.status.replaceAll("_", " ")}</span>}
+                    <span class="loom-run-metrics">
+                      <span class="loom-run-time" aria-label={`Elapsed time: ${metricLabel(run.durationSeconds, "duration_seconds")}`}>{metricLabel(run.durationSeconds, "duration_seconds")}</span>
+                      {(() => { const cost = apiCost({ run_id: run.id, model: group.model }); return cost && <span class="loom-run-cost" title={cost.description} aria-label={`${cost.description} ${cost.label}`} data-api-cost>{cost.label}</span>; })()}
+                    </span>
+                  </th>
+                  {run.cells.map((cell, hazardIndex) => {
+                    const judgment = judgments[cell];
+                    const description = `${modelName(group.model)} · ${group.effort}${run.effortSource === "explicit" ? "" : " (CLI default)"} · ${prompt.prompt} · ${run.label}: ${hazards[hazardIndex]} — ${judgment.label}. Run status: ${run.status.replaceAll("_", " ")}.`;
+                    return <td><button type="button" class="loom-cell" data-judgment={cell} data-cell-description={description} aria-label={description} title={description}><span aria-hidden="true">{judgment.symbol}</span></button></td>;
+                  })}
+                  <td>{(() => {
+                    const judgment = roundingFixJudgments[run.roundingFix as keyof typeof roundingFixJudgments];
+                    const description = `${modelName(group.model)} · ${group.effort} · ${prompt.prompt} · ${run.label}: Rounding fix — ${judgment.label}. ${run.roundingFixNote}`;
+                    return <button type="button" class="loom-cell loom-fix-cell" data-fix={run.roundingFix} data-cell-description={description} aria-label={description} title={description}><span aria-hidden="true">{judgment.symbol}</span></button>;
+                  })()}</td>
+                </tr>)}
+              </tbody>
+            </table>)}
+          </div>
+        </div>
+
+              <p class="loom-matrix-inspect" data-matrix-selection aria-live="polite">Select a cell for the judgment and supporting note.</p>
+              <div class="loom-detail-footnotes">
+                <p>Times are in minutes; costs are estimated USD. Attempts are independent, not matched pairs. Failed attempts stay out of scores and averages, even where their captured submissions were reviewed. A dash means no review.</p>
+                <p><strong>Fix:</strong> P = correction proposed; G = partial guard implemented; P+G = both; ○ = neither found; — = not audited. Guards still allow rounding loss. Testing a corrected variant separately doesn’t count as adopting it.</p>
+              </div>
+            </div>
+          </td></tr>
+        </tbody>)}
+      </table>
+    </div>
+    <div class="loom-score-legend" aria-label="Bar legend"><span><i class="loom-score-full"></i>Fully recognised</span><span><i class="loom-score-partial"></i>Partial</span><span><i class="loom-score-unrecognised"></i>Unstated / incorrect</span></div>
+    <p class="loom-caption">Score = correct judgments ÷ (3 runtime hazards × reviewed runs). Partial recognition is shown but earns no credit. Time and cost are arithmetic means over reviewed runs with available data. Rounding and fixes are separate.</p>
+    <p class="loom-caption">Effort names are provider settings, not equal compute budgets. The score measures explanations, not implementation security.</p>
+    <ApiCostNote />
+  </figure>
+</loom-hazard-matrix>
+<script>
+  class LoomHazardMatrix extends HTMLElement {
+    connectedCallback() {
+      if (this.dataset.ready) return;
+      this.dataset.ready = "true";
+      const configs = [...this.querySelectorAll<HTMLElement>("[data-config]")];
+      for (const config of configs) {
+        const toggle = config.querySelector<HTMLButtonElement>("[data-config-toggle]")!;
+        const detail = config.querySelector<HTMLElement>("[data-detail-row]")!;
+        config.querySelector<HTMLElement>("[data-config-fallback]")!.hidden = true;
+        detail.hidden = true;
+        toggle.hidden = false;
+        toggle.addEventListener("click", () => {
+          const open = toggle.getAttribute("aria-expanded") !== "true";
+          toggle.setAttribute("aria-expanded", String(open));
+          toggle.querySelector(".sr-only")!.textContent = open ? " — hide individual runs" : " — show individual runs";
+          detail.hidden = !open;
+        });
+        const output = config.querySelector<HTMLElement>("[data-matrix-selection]")!;
+        config.querySelectorAll<HTMLButtonElement>("[data-cell-description]").forEach(cell => {
+          const describe = () => { output.textContent = cell.dataset.cellDescription!; };
+          cell.addEventListener("click", describe);
+          cell.addEventListener("focus", describe);
+          cell.addEventListener("pointerenter", describe);
+        });
+      }
+      const filters = [...this.querySelectorAll<HTMLButtonElement>("[data-effort-filter]")];
+      const count = this.querySelector<HTMLElement>("[data-comparison-count]")!;
+      this.querySelector<HTMLElement>(".loom-effort-filter")!.hidden = false;
+      for (const filter of filters) filter.addEventListener("click", () => {
+        const effort = filter.dataset.effortFilter;
+        filters.forEach(button => button.setAttribute("aria-pressed", String(button === filter)));
+        let visible = 0, reviewed = 0, attempts = 0;
+        let previousModel = "";
+        for (const config of configs) {
+          config.hidden = effort !== "all" && config.dataset.effort !== effort;
+          if (!config.hidden) {
+            config.classList.toggle("loom-model-start", config.dataset.model !== previousModel);
+            previousModel = config.dataset.model!;
+            visible++; reviewed += Number(config.dataset.reviewed); attempts += Number(config.dataset.attempts);
+          }
+        }
+        count.textContent = `${visible} of ${configs.length} configurations · ${reviewed} / ${attempts} runs scored`;
+      });
+    }
+  }
+  if (!customElements.get("loom-hazard-matrix")) customElements.define("loom-hazard-matrix", LoomHazardMatrix);
+</script>

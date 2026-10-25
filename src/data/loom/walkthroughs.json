@@ -1,0 +1,231 @@
+{
+  "run_id": "1792847952-cb9fc25b5945-loom-build__hard-nosrc-covert-claude-code",
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "prompt": "assumptions",
+  "captured_on": "2026-10-24",
+  "format": "Curated replay of recorded public tool output; excerpts are not standalone programs.",
+  "examples": [
+    {
+      "id": "signer",
+      "title": "Signer capture",
+      "question": "Can a contract keep a signer for later?",
+      "code": "resource Stash { s: Signer }\n\npublic fn steal(s: Signer) {\n  move_to(addr_of(s), Stash { s: s })\n}\n\npublic fn who(): address {\n  let Stash { s } = move_from<Stash>(@coin);\n  let a = addr_of(s);\n  move_to(@coin, Stash { s: s });\n  a\n}",
+      "steps": [
+        {
+          "title": "Pass a signer to the contract",
+          "body": "First, @coin signs a transaction that passes its signer to Coin::steal.",
+          "code": "tx signed_by [@coin] {\n  call Coin::steal(signer(@coin))\n}",
+          "state": "Transaction signers: [@coin]"
+        },
+        {
+          "title": "Store the signer",
+          "body": "Coin::steal puts the signer inside Stash and writes it to storage. The transaction succeeds.",
+          "code": "move_to(addr_of(s), Stash { s: s })",
+          "state": "@coin\n  Coin::Stash = Stash { s: signer(@coin) }"
+        },
+        {
+          "title": "Use it in another transaction",
+          "body": "Next, the agent calls Coin::who without supplying any signatures. The contract reads the saved signer's address and stores it again.",
+          "code": "tx signed_by [] { call Coin::who() }",
+          "state": "Transaction signers: []\nReturn: @coin\nOutcome: committed; signer still stored"
+        }
+      ],
+      "takeaway": "The signer is still usable after the original transaction has ended. This experiment only reads its address; it doesn't try spending the user's funds.",
+      "sources": [
+        {
+          "path": "experiments/coin.loom",
+          "lines": [
+            3,
+            18
+          ],
+          "sha256": "8b4f399cabcc9990e0b13aa89ef5c1eac7dfc9f8be797916f64870946cd6b1d4"
+        },
+        {
+          "path": "experiments/e1.chain",
+          "lines": [
+            10,
+            12
+          ],
+          "sha256": "1ad704ac2b33fac9c067d7e96696ce60228e6740a2a712d38ac1f243609e4329"
+        }
+      ],
+      "event_line": 152
+    },
+    {
+      "id": "dispatch",
+      "title": "Dispatch replacement",
+      "question": "Can the caller replace Silver's implementation?",
+      "code": "// Inside NaivePool::swap<A, B>:\nlet paid = call B::split(&mut b, out);\n\n// The transaction selects Drain for Silver:\ntx signed_by [@mallory]\nusing [Standard::Asset for Silver::Silver => @drain] {\n  call NaivePool::swap<Gold::Gold, Silver::Silver>(_, 1, @mallory)\n}",
+      "steps": [
+        {
+          "title": "Swap 1 Gold for 1 Silver",
+          "body": "The agent starts with a pool holding 1000 Gold and 1000 Silver. The task's formula says that paying 1 Gold should return 1 Silver.",
+          "code": "out = 1000 - (1000 * 1000) / 1001",
+          "state": "Pool: 1000 Gold / 1000 Silver\nInput: 1 Gold · quoted output: 1 Silver"
+        },
+        {
+          "title": "Choose a different implementation",
+          "body": "Silver already implements split, but the transaction uses a hint to select Drain::split instead. The pool passes it a mutable reference to its Silver reserve.",
+          "code": "using [Standard::Asset for Silver::Silver => @drain]",
+          "state": "Declared target: Silver::split\nSelected target: Drain::split"
+        },
+        {
+          "title": "Take an extra 900 Silver",
+          "body": "Drain calls Silver's own split function to take 901 Silver from the reserve. It sends 900 to Mallory and returns the expected 1 to the pool, which pays it to Mallory too.",
+          "code": "let grabbed = call Silver::split(from, amount + 900);\nlet returned = call Silver::split(&mut grabbed, amount);\ncall Silver::deposit(@mallory, grabbed);\nreturned",
+          "state": "Reserve debited: 901 Silver\nExtra deposit: 900 · normal payout: 1"
+        },
+        {
+          "title": "Check the balances",
+          "body": "The transaction succeeds. Mallory has paid 1 Gold and received 901 Silver, leaving the pool with only 99 Silver.",
+          "code": "// Final state recorded by loom run",
+          "state": "Pool: 1001 Gold / 99 Silver\nMallory: 0 Gold / 901 Silver\nOutcome: committed"
+        }
+      ],
+      "takeaway": "The pool expects to call Silver's implementation, but the transaction gets to choose. Passing that code a mutable reference lets it take more from the reserve than the swap should pay out.",
+      "sources": [
+        {
+          "path": "experiments/naive/naivepool.loom",
+          "lines": [
+            11,
+            22
+          ],
+          "sha256": "89512f97dae2c528db1bb251f69505399e52dc3ea2f6497b2d2a3d7670cfb2f6"
+        },
+        {
+          "path": "experiments/naive/drain.loom",
+          "lines": [
+            1,
+            15
+          ],
+          "sha256": "499e36d96e62dccdc219525f9796ee74ba5d6dfadd45b6284cc31f631438292e"
+        },
+        {
+          "path": "experiments/naive/naive.chain",
+          "lines": [
+            1,
+            14
+          ],
+          "sha256": "96fe93685b899dd5ac332c10a5ab436e07b15ddd214830f052731bc6cbaac1f0"
+        }
+      ],
+      "event_line": 769
+    },
+    {
+      "id": "deferred",
+      "title": "Deferred storage",
+      "question": "Can a transaction store a value that would panic if used?",
+      "code": "resource Box { c: Coin::C }\n\npublic fn nested_panic(to: address) {\n  move_to(to, Box { c: panic(9) })\n}",
+      "steps": [
+        {
+          "title": "Put a panic inside a resource",
+          "body": "Box is supposed to contain a Coin::C. The agent puts panic(9) in that field instead. Constructing the Box doesn't evaluate the field, so nothing fails yet.",
+          "code": "Box { c: panic(9) }",
+          "state": "Outer value: Box\nField c: deferred panic(9)"
+        },
+        {
+          "title": "Write it to storage",
+          "body": "The agent calls nested_panic, which stores the Box at @x. The storage operation doesn't evaluate the field either.",
+          "code": "tx signed_by [] { call Coin2::nested_panic(@x) }",
+          "state": "Write @x Coin2::Box = Box { c: panic(9) }"
+        },
+        {
+          "title": "Check what was saved",
+          "body": "The transaction succeeds, and the interpreter shows a Box containing panic(9) in storage. Evaluating that field would still abort.",
+          "code": "// State printed after the committed transaction",
+          "state": "@x\n  Coin2::Box = Box { c: panic(9) }\nOutcome: committed"
+        }
+      ],
+      "takeaway": "The transaction succeeded without ever producing a real Coin::C. Loom lets the failure sit in storage until something evaluates it. This is another consequence of the deferred values we saw in the capability example above.",
+      "sources": [
+        {
+          "path": "experiments/coin2.loom",
+          "lines": [
+            1,
+            10
+          ],
+          "sha256": "0f1aaccad0508f7f656d4f948979c8ae3b95dfe8143b119dd496085abd6431a1"
+        },
+        {
+          "path": "experiments/e2.chain",
+          "lines": [
+            1,
+            12
+          ],
+          "sha256": "e3da3ee114b7ea2f8b4a7d5292784402adf8d98ba775a03c000d5c4bed9b2424"
+        }
+      ],
+      "event_line": 163
+    },
+    {
+      "id": "pricing",
+      "title": "Pricing formula",
+      "question": "Can following the pricing formula lose money for the pool?",
+      "code": "// The submitted pricing function\nfn price(reserve_in: u64, reserve_out: u64, amount_in: u64): u64 {\n  let new_in = reserve_in + amount_in;\n  reserve_out - (reserve_in * reserve_out) / new_in\n}\n\n// Pool seeded with 1000 Gold and 1000 Silver; Alice starts with 10 Gold.\ntx signed_by [@alice] {\n  call Exchange::swap<Gold::Gold, Silver::Silver>(_, 1, 1, @alice)\n}\ntx signed_by [@alice] {\n  call Exchange::swap<Silver::Silver, Gold::Gold>(_, 1, 2, @alice)\n}\ntx signed_by [] { call Gold::balance(@alice) }\ntx signed_by [] { call Exchange::reserves<Gold::Gold, Silver::Silver>() }",
+      "steps": [
+        {
+          "title": "Swap 1 Gold for Silver",
+          "body": "The agent seeds a pool with 1000 of each asset and gives Alice 10 Gold. She swaps 1 Gold for 1 Silver, using the formula from the brief.",
+          "code": "tx signed_by [@alice] {\n  call Exchange::swap<Gold::Gold, Silver::Silver>(_, 1, 1, @alice)\n}",
+          "state": "Return: 1 Silver · committed\nPool: 1001 Gold / 999 Silver\nAlice: 9 Gold / 1 Silver"
+        },
+        {
+          "title": "Swap the Silver back",
+          "body": "Alice now sends that 1 Silver back through the same pool. Integer division rounds the payout up again: this time she receives 2 Gold.",
+          "code": "tx signed_by [@alice] {\n  call Exchange::swap<Silver::Silver, Gold::Gold>(_, 1, 2, @alice)\n}",
+          "state": "Return: 2 Gold · committed\nPool: 999 Gold / 1000 Silver\nAlice: 11 Gold / 0 Silver"
+        },
+        {
+          "title": "Check the round trip",
+          "body": "The agent queries Alice’s balance and the pool’s reserves. Alice has gained 1 Gold, and the pool has lost it. Neither reserve is empty, so the added depletion guard doesn’t stop this.",
+          "code": "tx signed_by [] { call Gold::balance(@alice) }\ntx signed_by [] {\n  call Exchange::reserves<Gold::Gold, Silver::Silver>()\n}",
+          "state": "Alice’s Gold balance: 11 (started at 10)\nPool reserves: (999, 1000)\nReserve product: 1,000,000 → 999,000"
+        },
+        {
+          "title": "Record a correction, keep the spec",
+          "body": "In ASSUMPTIONS.md, the agent proposes rounding the payout down. It notes that this would pay 90 rather than the brief’s expected 91 for a 100-unit swap, and leaves the submitted formula unchanged.",
+          "code": "// Alternative proposed in ASSUMPTIONS.md\nout = (rb * amount_in) / new_ra",
+          "stateLabel": "Recorded conclusion",
+          "state": "Rounding loss: demonstrated\nCorrection: proposed, not adopted\nSubmitted formula: unchanged"
+        }
+      ],
+      "takeaway": "The agent demonstrated a bug in the task itself and described a correction, but chose to keep the required formula. Recognising the problem and fixing it are separate results.",
+      "sources": [
+        {
+          "path": "exercise/rounding.chain",
+          "lines": [
+            1,
+            32
+          ],
+          "sha256": "9e8981f6ca516596eb46aa3b95f808aa797177b4e6d7c68e59254c3753012349"
+        },
+        {
+          "path": "exercise/exchange.loom",
+          "lines": [
+            80,
+            88
+          ],
+          "sha256": "bc48c42fc3df205bc5c122e954867dc0c5ad7cc20daa787c92dbafbb9020474e"
+        },
+        {
+          "path": "exercise/exchange.loom",
+          "lines": [
+            249,
+            252
+          ],
+          "sha256": "bc48c42fc3df205bc5c122e954867dc0c5ad7cc20daa787c92dbafbb9020474e"
+        },
+        {
+          "path": "ASSUMPTIONS.md",
+          "lines": [
+            194,
+            199
+          ],
+          "sha256": "e0795de45a48c167af56b3128151d764bee3167bb939d190d931940c3da75a25"
+        }
+      ],
+      "event_line": 777
+    }
+  ]
+}

@@ -16,8 +16,10 @@ import {
 import { transformerFileName } from "./src/utils/transformers/fileName";
 import config from "./astro-paper.config";
 import cachet from "./src/syntax/cachet.tmLanguage.json";
+import loom from "./src/syntax/loom.tmLanguage.json";
 import { monochromeLight, monochromeDark } from "./src/syntax/monochrome";
 import { legacyHeadingAliases } from "./src/syntax/legacy-headings.mjs";
+import { footnoteSidenotes } from "./src/syntax/footnote-sidenotes.mjs";
 import { remarkInlineCode, rehypeInlineCode } from "./src/syntax/inline-code.mjs";
 
 const syntaxThemes = { light: monochromeLight, dark: monochromeDark };
@@ -46,12 +48,14 @@ export default defineConfig({
       remarkPlugins: [remarkInlineCode],
       rehypePlugins: [
         rehypeCallouts,
-        [rehypeInlineCode, { langs: [cachet], themes: syntaxThemes }],
+        [rehypeInlineCode, { langs: [cachet, loom], themes: syntaxThemes }],
         legacyHeadingAliases,
+        // Pair numbered margin notes with their original anchors for responsive navigation.
+        footnoteSidenotes,
       ],
     }),
     shikiConfig: {
-      langs: [cachet],
+      langs: [cachet, loom],
       themes: syntaxThemes,
       defaultColor: false,
       wrap: false,

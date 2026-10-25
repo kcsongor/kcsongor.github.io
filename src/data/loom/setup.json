@@ -1,0 +1,6 @@
+{
+  "baseline": "# Your assignment\n\nEverything is in [BRIEF.md](BRIEF.md). Read it, then\n[docs/LANGUAGE.md](docs/LANGUAGE.md) and [docs/RUNBOOK.md](docs/RUNBOOK.md), and\nskim `examples/`.\n\nWork in `exercise/`. The skeletons there check clean as they stand:\n\n```sh\nloom check exercise/standard.loom exercise/gold.loom exercise/silver.loom exercise/exchange.loom\nloom run   exercise/smoke.chain\n```\n\nHand back everything BRIEF.md asks for, in the places it names. You are on your\nown \u2014 there is nobody to ask, and no reviewer to come back to. Stop when you have\nwork you would put your name to.\n",
+  "assumptions": "Alongside your implementation, maintain an `ASSUMPTIONS.md` file in the workspace\nroot describing the runtime assumptions your design relies on. For each\nassumption, say whether it is established by the documentation, checked by an\nexperiment you ran, or remains unverified. Update the file as you work.\n",
+  "baseline_sha256": "ecf491e105c2f9efa005e85e7b14896b271571c63cac2054a26a490c36ab42d3",
+  "assumptions_sha256": "9606438927c1e0c296ce1975d760ef345dcd0e22c63b184ba291f8ef6a2ba6a7"
+}

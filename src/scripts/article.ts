@@ -1,3 +1,5 @@
+import "./footnotes";
+
 for (const heading of document.querySelectorAll<HTMLElement>("#article :is(h2,h3,h4,h5,h6)[id]")) {
   const link = document.createElement("a");
   link.className = "heading-link";
@@ -8,6 +10,7 @@ for (const heading of document.querySelectorAll<HTMLElement>("#article :is(h2,h3
 }
 for (const block of document.querySelectorAll<HTMLPreElement>("#article pre")) {
   block.tabIndex = 0;
+  if (!block.querySelector("code")) continue;
   if (!navigator.clipboard) continue;
   const wrapper = document.createElement("div");
   wrapper.className = "code-container";

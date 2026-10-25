@@ -1,0 +1,84 @@
+---
+import { compiledContent } from "../../data/loom/language.md";
+
+// Frozen handout, identical in the October 16 and October 24 runs checked.
+// LANGUAGE.md SHA-256: 7d13cfc92f83800c4896ebc2c9178a0c8a9ccdcfde6eea3cb6ead20bc58dda5c
+// Keep the source verbatim; adapt its relative link and heading levels for embedding.
+const html = (await compiledContent())
+  .replace('href="RUNBOOK.md"', 'href="/loom/RUNBOOK.md" download')
+  .replace(/(<\/?h)([12])(?=[\s>])/g, (_, tag, level) => `${tag}${Number(level) + 2}`);
+---
+
+<details class="loom-language-spec" id="loom-language-spec">
+  <summary>Language spec</summary>
+  <div class="loom-language-spec-content" set:html={html} />
+</details>
+
+<script>
+  const details = document.querySelector<HTMLDetailsElement>("#loom-language-spec")!;
+  const summary = details.querySelector<HTMLElement>("summary")!;
+  const content = details.querySelector<HTMLElement>(".loom-language-spec-content")!;
+  let expanded = details.open;
+  let animation: Animation | undefined;
+  const setOpen = (open: boolean) => {
+    const start = details.getBoundingClientRect().height;
+    animation?.cancel();
+    expanded = open;
+    content.inert = !open;
+    const finish = () => {
+      details.open = open;
+      details.style.height = "";
+      details.style.overflow = "";
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { finish(); return; }
+    details.style.height = "";
+    details.open = true;
+    const style = getComputedStyle(details);
+    const end = open ? details.getBoundingClientRect().height : summary.getBoundingClientRect().height + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+    details.style.height = `${start}px`;
+    details.style.overflow = "clip";
+    animation = details.animate([{ height: `${start}px` }, { height: `${end}px` }], { duration: 320, easing: "cubic-bezier(.22, 1, .36, 1)", fill: "forwards" });
+    const current = animation;
+    current.onfinish = () => { finish(); current.cancel(); animation = undefined; };
+  };
+  summary.addEventListener("click", event => { event.preventDefault(); setOpen(!expanded); });
+  details.addEventListener("loom:expand", () => setOpen(true));
+</script>
+
+<style>
+  .loom-language-spec {
+    box-sizing: border-box;
+    display: block;
+    margin-block: 1.5rem;
+    border-block: 1px solid var(--border);
+    cursor: auto;
+    user-select: text;
+  }
+  summary {
+    cursor: pointer;
+    padding-block: 1rem;
+    font: .875rem/1.5 var(--font-app);
+  }
+  summary:focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 3px;
+  }
+  .loom-language-spec-content {
+    border-inline-start: 1px solid var(--border);
+    padding-inline-start: 1rem;
+    padding-bottom: 2rem;
+    font-size: .875rem;
+  }
+  .loom-language-spec-content :global(p) {
+    display: block;
+  }
+  .loom-language-spec-content :global(h3),
+  .loom-language-spec-content :global(h4) {
+    font-size: 1rem;
+    margin-block: 1.5rem .75rem;
+  }
+  .loom-language-spec-content :global(table) {
+    display: block;
+    overflow-x: auto;
+  }
+</style>

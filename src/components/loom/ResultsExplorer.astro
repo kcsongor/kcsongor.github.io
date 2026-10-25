@@ -1,0 +1,192 @@
+---
+import "./loom.css";
+import { plotModelAverages, describeAverage, configurationId, averageId } from "./averages.mjs";
+import { apiCost } from "./api-cost.mjs";
+import ApiCostNote from "./ApiCostNote.astro";
+import snapshot from "../../data/loom/results.json";
+import { recognitionCount, modelName, modelMarker, plotFrame } from "./results.mjs";
+const initial = snapshot.rows.map(row => ({ ...row, api_cost_usd: apiCost(row)?.usd ?? null }));
+const plot = plotModelAverages(initial, "duration_seconds");
+const pairConfigurations = [...new Map(initial.map(row => [configurationId(row), { id: configurationId(row), model: row.model }])).values()];
+const effortSeriesKeys = [...new Map(initial.map(row => [JSON.stringify([row.model, row.prompt_condition]), { id: JSON.stringify([row.model, row.prompt_condition]), model: row.model, prompt: row.prompt_condition }])).values()];
+const configurations = [...new Map(initial.map(row => [averageId(row), { id: averageId(row), model: row.model, effort: row.effective_effort, prompt: row.prompt_condition }])).values()];
+const points = new Map(plot.points.map(point => [point.id, point]));
+const options = (key: "model" | "effective_effort") => [...new Set(snapshot.rows.map(row => row[key]))];
+---
+<loom-results class="block">
+  <figure class="loom-figure not-prose">
+    <figcaption><span class="loom-kicker">Average results</span>Recognition and resource use by model and effort</figcaption>
+    <div class="loom-controls">
+      <label>Model<select data-filter="model" disabled><option value="all">All models</option>{options("model").map(value => <option value={value}>{modelName(value)}</option>)}</select></label>
+      <label data-metric-fallback>Horizontal axis<select data-metric disabled><option value="api_cost_usd">Estimated API cost</option><option value="duration_seconds" selected>Elapsed time</option><option value="output_tokens">Output tokens</option></select></label>
+    </div>
+    <div class="loom-chart-toolbar">
+      <div class="loom-metric-switch" role="group" aria-label="Horizontal axis" data-metric-controls hidden>
+        <button type="button" data-axis-metric="api_cost_usd" aria-pressed="false">Est. API cost</button>
+        <button type="button" data-axis-metric="duration_seconds" aria-pressed="true">Elapsed time</button>
+        <button type="button" data-axis-metric="output_tokens" aria-pressed="false">Output tokens</button>
+      </div>
+      <div class="loom-chart-legend" aria-label="Model colors">
+        {options("model").map(model => <span data-model-key={model} hidden={!plot.groups.some(group => group.model === model && points.has(group.run_id))}><svg class="loom-model-key" data-model={model} viewBox="-12 -12 24 24" aria-hidden="true"><path d={modelMarker(model)} /></svg>{modelName(model)}</span>)}
+      </div>
+    </div>
+    <div class="loom-prompt-legend" aria-label="Prompt markers"><span><svg viewBox="0 0 32 16" aria-hidden="true"><path d="M0 8H32" stroke-dasharray="3 3" /><circle cx="16" cy="8" r="5" /></svg>Baseline</span><span><svg viewBox="0 0 32 16" aria-hidden="true"><path d="M0 8H32" /><circle cx="16" cy="8" r="5" class="is-filled" /></svg>Assumptions</span></div>
+    <p class="loom-caption" data-count aria-live="polite">{plot.points.length} prompt averages · {plot.groups.reduce((n, group) => n + group.runs, 0)} reviewed runs with elapsed times</p>
+    <div class="loom-plot-wrap">
+    <svg class="loom-plot" viewBox="0 0 640 420" role="group" aria-label="Mean runtime recognition against mean estimated API cost, elapsed time or output tokens. Each focusable point represents one model, effort setting, and prompt. Lines connect baseline and assumptions averages.">
+      <path class="loom-axes" d={`M${plotFrame.left} ${plotFrame.top}V${plotFrame.bottom}H${plotFrame.right}`} />
+      <text class="loom-axis-title" transform="translate(22 190) rotate(-90)" text-anchor="middle">Mean runtime recognition (%)</text>
+      {[0, 0.75, 1.5, 2.25, 3].map(value => {
+        const y = plotFrame.bottom - value / 3 * (plotFrame.bottom - plotFrame.top);
+        return <>
+          <path class="loom-axes" d={`M${plotFrame.left - 5} ${y}h5`} />
+          <text x={plotFrame.left - 15} y={y + 5} text-anchor="end">{Math.round(value / 3 * 100)}</text>
+        </>;
+      })}
+      <g data-ticks>{plot.ticks.map(tick => <g transform={`translate(${tick.x} ${plotFrame.bottom})`}>
+        <path class="loom-axes" d="M0 0v5" /><text y="27" text-anchor="middle">{tick.label}</text>
+      </g>)}</g>
+      <text class="loom-axis-title" data-axis x="336" y="407" text-anchor="middle">Mean elapsed time (minutes)</text>
+      {effortSeriesKeys.map(config => {
+        const series = plot.effortSeries.find(series => series.id === config.id);
+        return <path class="loom-effort-line" data-effort-series={config.id} data-model={config.model} data-prompt={config.prompt} d={series?.path ?? ""} display={series ? undefined : "none"} aria-hidden="true" />;
+      })}
+      {pairConfigurations.map(config => {
+        const pair = plot.pairs.find(pair => pair.id === config.id);
+        return <line class="loom-pair-line" data-pair={config.id} data-model={config.model} x1={pair?.from.x ?? 0} y1={pair?.from.y ?? 0} x2={pair?.to.x ?? 0} y2={pair?.to.y ?? 0} display={pair ? undefined : "none"} aria-hidden="true" />;
+      })}
+      {configurations.map(config => {
+        const point = points.get(config.id);
+        const group = plot.groups.find(group => group.run_id === config.id);
+        const description = group ? describeAverage(group, "duration_seconds") : `${modelName(config.model)} · ${config.effort} · ${config.prompt}: no elapsed time available`;
+        return <>
+          <path class="loom-point" d={modelMarker(config.model)} data-run={config.id} data-model={config.model} data-prompt={config.prompt} data-average transform={`translate(${point?.x ?? plotFrame.left} ${point?.y ?? plotFrame.bottom})`} display={point ? undefined : "none"} tabindex={point ? "0" : "-1"} role="button" aria-label={description}><title>{description}</title></path>
+        </>;
+      })}
+    </svg>
+    <div class="loom-plot-tooltip" id="loom-average-tooltip" role="tooltip" data-plot-tooltip hidden><strong data-tooltip-model></strong><span data-tooltip-condition></span></div>
+    </div>
+    <p class="loom-caption">Hollow markers show baseline; filled markers show assumptions. Lines follow effort levels within each model: dashed for baseline, solid for assumptions. Hover or focus a marker to see its effort and the link to the other prompt. These are group averages, not matched runs. Both axes use the same reviewed runs with available data, weighted equally. Gemini has no cost estimate yet.</p>
+    <p data-selection class="loom-selection" aria-live="polite">Select a symbol for its averages and run count.</p>
+    <p class="loom-caption">Recognition is the percentage of fully correct judgments across the three runtime hazards. Rounding is shown separately in the matrix. Fake-capability recognition is recorded in the reviews but isn't a separate plotted score.</p>
+    <noscript><p class="loom-caption">JavaScript enables filtering. The chart includes all recorded run dates. Expand the matrix below for individual runs.</p></noscript>
+  </figure>
+  <script is:inline type="application/json" data-results set:html={JSON.stringify(initial).replace(/</g, "\\u003c")} />
+</loom-results>
+<script>
+  import { filterRuns, plotFrame, modelName } from "./results.mjs";
+  import { plotModelAverages, describeAverage } from "./averages.mjs";
+  class LoomResults extends HTMLElement {
+    connectedCallback() {
+      if (this.dataset.ready) return;
+      this.dataset.ready = "true";
+      const rows = JSON.parse(this.querySelector("[data-results]")!.textContent!);
+      const controls = [...this.querySelectorAll<HTMLSelectElement>("[data-filter]")];
+      const metric = this.querySelector<HTMLSelectElement>("[data-metric]")!;
+      const metricButtons = [...this.querySelectorAll<HTMLButtonElement>("[data-axis-metric]")];
+      const selection = this.querySelector<HTMLElement>("[data-selection]")!;
+      const count = this.querySelector<HTMLElement>("[data-count]")!;
+      const tooltip = this.querySelector<HTMLElement>("[data-plot-tooltip]")!;
+      const plotWrap = this.querySelector<HTMLElement>(".loom-plot-wrap")!;
+      const hideTooltip = () => {
+        tooltip.hidden = true;
+        this.querySelectorAll(".is-muted, .is-active").forEach(element => element.classList.remove("is-muted", "is-active"));
+      };
+      let currentPlot = plotModelAverages(rows, "duration_seconds");
+      const describe = (id: string) => {
+        const group = currentPlot.groups.find(group => group.run_id === id);
+        return group ? describeAverage(group, metric.value) : "No reviewed runs with this metric.";
+      };
+      const render = () => {
+        hideTooltip();
+        const filters = Object.fromEntries(controls.map(input => [input.dataset.filter!, input.value]));
+        const selected = filterRuns(rows, filters);
+        const plot = plotModelAverages(selected, metric.value);
+        currentPlot = plot;
+        const points = new Map(plot.points.map(point => [point.id, point]));
+        metricButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.axisMetric === metric.value)));
+        this.querySelectorAll<HTMLElement>("[data-model-key]").forEach(key => { key.hidden = !plot.groups.some(group => group.model === key.dataset.modelKey && points.has(group.run_id)); });
+        this.querySelectorAll<SVGPathElement>("[data-run]").forEach(circle => {
+          const point = points.get(circle.dataset.run!);
+          circle.setAttribute("display", point ? "inline" : "none");
+          circle.setAttribute("tabindex", point ? "0" : "-1");
+          if (point) {
+            circle.setAttribute("transform", `translate(${point.x} ${point.y})`);
+            circle.setAttribute("aria-label", describe(circle.dataset.run!));
+            const title = circle.querySelector("title");
+            if (title) title.textContent = describe(circle.dataset.run!);
+          }
+        });
+        this.querySelectorAll<SVGPathElement>("[data-effort-series]").forEach(path => {
+          const series = plot.effortSeries.find(series => series.id === path.dataset.effortSeries);
+          path.setAttribute("display", series ? "inline" : "none");
+          path.setAttribute("d", series?.path ?? "");
+        });
+        this.querySelectorAll<SVGLineElement>("[data-pair]").forEach(line => {
+          const pair = plot.pairs.find(pair => pair.id === line.dataset.pair);
+          line.setAttribute("display", pair ? "inline" : "none");
+          if (pair) {
+            line.setAttribute("x1", String(pair.from.x)); line.setAttribute("y1", String(pair.from.y));
+            line.setAttribute("x2", String(pair.to.x)); line.setAttribute("y2", String(pair.to.y));
+          }
+        });
+        const ticks = this.querySelector("[data-ticks]")!;
+        ticks.replaceChildren(...plot.ticks.map(tick => {
+          const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          group.setAttribute("transform", `translate(${tick.x} ${plotFrame.bottom})`);
+          const mark = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          mark.setAttribute("class", "loom-axes");
+          mark.setAttribute("d", "M0 0v5");
+          const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          label.setAttribute("y", "27");
+          label.setAttribute("text-anchor", "middle");
+          label.textContent = tick.label;
+          group.append(mark, label);
+          return group;
+        }));
+        const axisName = metric.value === "api_cost_usd" ? "Mean estimated API cost" : metric.value === "duration_seconds" ? "Mean elapsed time" : "Mean output tokens";
+        const axisUnits = metric.value === "api_cost_usd" ? " (USD)" : metric.value === "duration_seconds" ? " (minutes)" : "";
+        this.querySelector("[data-axis]")!.textContent = `${axisName}${axisUnits}`;
+        count.textContent = `${plot.points.length} prompt averages · ${plot.groups.filter(group => points.has(group.run_id)).reduce((n, group) => n + group.runs, 0)} reviewed runs with this metric · ${selected.length} selected attempts`;
+        selection.textContent = plot.points.length ? "Select a symbol for its averages and run count." : "No reviewed runs with this metric match these filters.";
+      };
+      for (const input of [...controls, metric]) { input.disabled = false; input.onchange = render; }
+      metricButtons.forEach(button => { button.onclick = () => { metric.value = button.dataset.axisMetric!; render(); }; });
+      this.querySelector<HTMLElement>("[data-metric-fallback]")!.hidden = true;
+      this.querySelector<HTMLElement>("[data-metric-controls]")!.hidden = false;
+      this.querySelectorAll<SVGPathElement>("[data-run]").forEach(circle => {
+        // The native title remains a fallback until the custom tooltip is ready.
+        circle.querySelector("title")?.remove();
+        circle.setAttribute("aria-describedby", tooltip.id);
+        const select = () => {
+          selection.textContent = describe(circle.dataset.run!);
+          const group = currentPlot.groups.find(group => group.run_id === circle.dataset.run);
+          if (!group) return;
+          this.querySelectorAll<SVGElement>(".loom-point, .loom-effort-line").forEach(element => {
+            element.classList.toggle("is-muted", element.dataset.model !== group.model);
+            element.classList.toggle("is-active", element.dataset.model === group.model);
+          });
+          this.querySelectorAll<SVGLineElement>("[data-pair]").forEach(line => line.classList.toggle("is-active", line.dataset.pair === group.pairId));
+          tooltip.querySelector("[data-tooltip-model]")!.textContent = modelName(group.model);
+          tooltip.querySelector("[data-tooltip-condition]")!.textContent = `${group.effort} effort · ${group.prompt === "baseline" ? "Baseline" : "Assumptions"}`;
+          tooltip.hidden = false;
+          const wrap = plotWrap.getBoundingClientRect();
+          const mark = circle.getBoundingClientRect();
+          const left = Math.max(0, Math.min(mark.x + mark.width / 2 - wrap.x - tooltip.offsetWidth / 2, wrap.width - tooltip.offsetWidth));
+          const above = mark.top - wrap.top - tooltip.offsetHeight - 12;
+          tooltip.style.left = `${left}px`;
+          tooltip.style.top = `${above >= 0 ? above : mark.bottom - wrap.top + 12}px`;
+        };
+        circle.addEventListener("focus", select);
+        circle.addEventListener("click", select);
+        circle.addEventListener("pointerenter", select);
+        circle.addEventListener("pointerleave", () => { if (document.activeElement !== circle) hideTooltip(); });
+        circle.addEventListener("blur", hideTooltip);
+        circle.addEventListener("keydown", event => { if (event.key === "Escape") hideTooltip();
+          if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(); } });
+      });
+      render();
+    }
+  }
+  if (!customElements.get("loom-results")) customElements.define("loom-results", LoomResults);
+</script>

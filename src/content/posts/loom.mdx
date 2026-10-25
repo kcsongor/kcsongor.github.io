@@ -1,0 +1,237 @@
+---
+title: "Coding agents in unfamiliar runtimes"
+description: "A case study: how coding agents investigate unfamiliar runtime rules, and what an assumptions log changes."
+pubDatetime: 2026-10-25T16:35:00Z
+tags: [programming-languages, coding-agents]
+inlineCodeLanguage: loom
+---
+
+import ExperimentSetup from '../../components/loom/ExperimentSetup.astro';
+import LanguageSpec from '../../components/loom/LanguageSpec.astro';
+import HazardWalkthrough from '../../components/loom/HazardWalkthrough.astro';
+import ResultsExplorer from '../../components/loom/ResultsExplorer.astro';
+import HazardMatrix from '../../components/loom/HazardMatrix.astro';
+import APIInventory from '../../components/loom/APIInventory.astro';
+
+It's tempting to ask a coding agent to help with a task we don't fully understand. It researches the problem, writes a sensible looking explanation, and produces working examples.
+This works well for tasks the model already understands. But what about unfamiliar tasks? The problem is that benchmark results don't tell us whether a particular solution is trustworthy, and the models can sound just as confident when they're wrong.
+
+OpenAI recently published an [article on coding in low-resource programming languages](https://openai.com/index/low-resource-programming-languages/). The results are very impressive, but I would qualify them in two ways: the tasks have existing implementations that evaluators can check the results against, and the languages still have literature on them, even if training material is relatively scarce. Having a reference implementation helps with evaluating correctness.
+
+In this blog post, we'll discuss an approach to evaluate how well each model adapts to an unfamiliar environment. We do this by designing a small programming language called Loom, that looks familiar, but with unintuitive (or arguably broken) semantics. The exercise also asks the agent to design an API, so matching existing behaviour isn't enough. Then we'll see whether each model falls into the familiarity trap, or checks that the runtime actually behaves as it expects.
+
+## Background
+
+Loom is a small smart-contract language heavily inspired by [Move](https://www.sui.io/move). Familiarity with smart contracts is not required to understand the main takeaways of this blog post. I chose this domain because smart contracts tend to be small programs, and bugs in them have very direct monetary impact.[^different-experiment]
+
+[^different-experiment]: It would be interesting to repeat this experiment in a different domain, to see whether this behaviour changes outside a financial setting.
+
+A smart contract is a program that lets users interact with shared state through transactions. Each transaction either succeeds as a whole or leaves that state unchanged. For example, a token contract keeps a ledger of users’ balances. When one user transfers tokens to another, the contract updates both balances, and later transactions see the updated state.
+
+The runtime authenticates the sender, typically by verifying a cryptographic signature. The contract then checks whether that sender is allowed to spend the tokens and whether the balance is sufficient. If either check fails, the transfer is rejected.
+
+In Move, it would look something like this:[^move-details]
+
+[^move-details]: Simplified Move; imports, `acquires` annotations, and type abilities are omitted. Loom's version is similar, but its storage functions are named differently (`borrow_mut`, `addr_of`) and `move_to` takes an address rather than a signer.
+
+```move
+module token {
+    struct Balance { amount: u64 }
+
+    public fun register(account: signer) {
+        // reverts if Balance already exists
+        move_to(account, Balance { amount: 0 });
+    }
+
+    public fun transfer(from: signer, to: address, amount: u64) {
+        let source = borrow_global_mut<Balance>(address_of(from));
+        source.amount = source.amount - amount; // Reverts on underflow.
+        let destination = borrow_global_mut<Balance>(to);
+        destination.amount = destination.amount + amount;
+    }
+}
+```
+
+Calling `register` uses `move_to` to create a user's balance in storage, initially set to 0. `transfer` transfers `amount` from `from` to `to`.
+Both functions take a `signer` identifying the authenticated account. `transfer` uses it to select the balance to debit. `to` is a bare `address`, so the recipient doesn't have to sign the transaction.
+
+Next we'll look at Loom, and in particular how it *differs* from Move. These are the differences the agent needs to discover while working on the task.
+
+## Loom vs Move: the familiarity trap
+
+### Signers
+
+Move disallows storing a `signer`, while Loom (which spells it `Signer`) allows a resource to keep a `Signer` after the transaction ends.
+
+```loom
+// Move: rejected, because signer cannot be stored
+struct Stash has key { s: signer }
+
+// Loom: the signer can survive the transaction
+resource Stash { s: Signer }
+move_to(to, Stash { s: s });
+```
+
+If a user passes their `Signer` to a malicious contract, that contract can store it and later call the token contract's `transfer` function to spend the user's balance, without a new signature. The danger is that passing a signer to untrusted code gives it authority that can outlive the transaction.
+
+Note that the original Move signer is also quite dangerous, because even though
+a contract can't store it, it can still use it to call functions such as `transfer` during the transaction. Sui Move uses owned objects and the [capability pattern](https://github.com/sui-foundation/sui-move-intro-course/blob/main/unit-two/lessons/6_capability_design_pattern.md) to give contracts more limited authority.
+For example, to execute admin-only actions on a contract, the admin would own an object of type `AdminCap` (the admin capability) and pass that by reference to the gated functions:
+
+```loom
+public fun admin_only(admin_cap: &AdminCap) {
+ // privileged action
+}
+```
+
+The agent should recognise this problem and avoid passing a `Signer` where a more limited capability would suffice.
+
+### Choosing which code gets called
+
+Loom has interfaces whose methods can be resolved via dynamic dispatch.
+
+```loom
+let paid = call B::split(&mut reserve, amount);
+```
+
+Here `B` is a type parameter of the calling function, and `split` can be called on any type `B` as long as there is an implementation for the `Standard::Asset` interface (which declares `split`). The documentation given to the agents says that when a type's module doesn't provide an implementation, a transaction can supply another module's address using a resolution hint. What it doesn't mention is that this hint can also override an existing implementation. Even if `Silver` already implements the interface, the transaction can redirect the call to an attacker-controlled implementation:
+
+```loom
+// Replace Silver's existing implementation with the one at @drain
+using [Standard::Asset for Silver::Silver => @drain]
+```
+
+Since the call above passes a mutable reference to the reserve, the selected code can take more than the requested amount.
+
+### Deferred failures
+
+This last one was inspired by frustrating debugging sessions in Haskell. Loom's `panic` produces a deferred failure. It only aborts the transaction when the value it stands for is actually evaluated.
+
+If it's never evaluated, the transaction can still commit. In particular, it becomes possible to invoke `admin_only` as follows:
+```loom
+let admin_cap = panic(0);
+admin_only(&admin_cap)
+```
+
+The `admin_only` function never inspects the capability, so it performs the privileged action even though no real `AdminCap` was constructed. Requiring a reference to a capability works in Move because the caller has to produce a real value of that type. In Loom, that assumption no longer holds.
+One way to protect the privileged action is to put a concrete field inside `AdminCap` and check its value before performing the action. That forces a deferred failure to abort first.
+
+## The task and the setup
+
+We give the agent a short language spec, along with examples and an executable interpreter. Here's the spec used in these runs:
+
+<LanguageSpec />
+
+There are a couple of things worth noticing. The spec says that a resource can contain any value type except references. That allows it to store a `Signer`. An agent could work out the signer retention problem from that rule, without running an experiment.
+
+The dispatch story is less complete. It says that a transaction can supply an implementation when the type's module doesn't provide one, but doesn't say what happens when it does. The agent should recognise this and run experiments.
+
+Deferred failures sit in between. The spec describes `panic(code)` as a bottom-typed value that aborts when inspected. That hints at laziness, but doesn't spell out that an uninspected panic can stand in for a real value and let the transaction commit.
+
+We ask the agent to design an asset interface, implement two assets, and build a generic constant-product exchange that works with both. The exchange holds a reserve of each asset and prices swaps to preserve the product of the two reserves, apart from rounding. The agent gets to design the API. Prescribing the function signatures could give away the problems (though it would be a lot easier to grade).
+
+Each attempt starts in a fresh container with the same handout, examples, skeleton modules, and the compiled interpreter. The agent doesn't have access to the interpreter's source code and is given 45 minutes to complete the task.
+The brief asks for access control, but doesn't point out these problems.
+
+We run the task with two versions of the prompt: the baseline instruction, and the same instruction with an extra paragraph asking for an assumptions log.
+
+<ExperimentSetup />
+
+We can then see whether the models do better when they're asked to write down their assumptions.
+
+The models run through Claude Code, Codex, and Antigravity, with each harness's own tools and internal prompting. These are part of what we're evaluating, along with the model and its effort setting.
+
+> [!NOTE]
+> A setting called “high” doesn't mean the same compute budget across different providers.
+
+### Bonus: spec bug
+
+We leave the API design to the agent, but specify how the exchange should price a swap. That formula has a bug. Here `ra` and `rb` are the reserves, and `amount_in` is the amount paid in:
+
+```text
+new_ra = ra + amount_in
+out = rb - (ra * rb) / new_ra
+```
+
+Integer division rounds the remaining reserve down, so the payout rounds up. Starting with a 1000/1000 pool, a trader can swap 100 Gold for 91 Silver, then swap back for 101 Gold. Following the spec lets the trader take 1 Gold from the pool through this round trip.
+
+Rounding the payout down would pay 90 Silver instead, but would contradict the brief's expected answer. We record whether the agent notices the issue, proposes a correction, or changes the submitted implementation.
+
+## Experiments from a recorded run
+
+The following walkthroughs replay experiments from one Opus 5.5 high-effort run with the assumptions instruction. They show how the agent investigated these behaviours and the pricing formula. The dispatch example drains a deliberately naive pool built for the experiment, not the agent's final exchange.
+
+<HazardWalkthrough />
+
+## Scoring
+
+Working code doesn't tell us whether the agent understood the problem. It might avoid a problem by accident, or explain it correctly and still write vulnerable code.
+
+So we score whether the agents can recognise and explain these semantic traps:
+
+<ul className="loom-scoring-legend" role="list">
+  <li><span className="loom-cell" data-judgment="correct" aria-hidden="true">✓</span><span><strong>Correct:</strong> it explains what goes wrong and why.</span></li>
+  <li><span className="loom-cell" data-judgment="partial" aria-hidden="true">◐</span><span><strong>Partial:</strong> it notices the problem, but misses part of it.</span></li>
+  <li><span className="loom-cell" data-judgment="unstated" aria-hidden="true">○</span><span><strong>Unstated:</strong> it doesn't explain the problem.</span></li>
+  <li><span className="loom-cell" data-judgment="incorrect" aria-hidden="true">×</span><span><strong>Incorrect:</strong> its explanation is wrong.</span></li>
+</ul>
+
+An agent helped review the submitted work with references to the evidence, which I then manually verified.
+
+The score covers signer capture, dispatch replacement, and deferred values equally. Rounding is recorded separately.
+
+> [!NOTE]
+> For deferred values, a run counts as correct if it notices that a panic can sit in storage without aborting. Recognising that it can stand in for an `AdminCap` is a stricter judgment, which the reviews record separately but the percentage doesn't use.
+
+The percentage counts how often a model fully recognises a hazard. If it recognises two of the three in every run, it scores 67%. We show partial recognition too, but don't count it towards the score.
+
+Testing the implementations takes some extra work. Since there is no fixed API, we can't run the same exploit unchanged against every solution.
+So I had a separate grader agent adapt exploits to the submitted interfaces. I report the outcome after the scores.
+
+Below is a sample of the different signatures and how often they appeared, counting signatures that differ only in parameter names together.
+
+> [!NOTE]
+> These counts cover 113 captured submissions, including runs outside the results below. A submission can contribute more than one signature.
+
+<APIInventory />
+
+## Results
+
+There are 81 included attempts across five models, of which 75 completed and were reviewed. The six failed attempts don't contribute to the scores or averages, even where their captured submissions were reviewed.
+
+> [!NOTE]
+> Of the six failures, three were Gemini (two process errors, including an HTTP 500 on its first baseline run, and one agent error), one was a GPT 6 Astra max-effort process error, and two were timeouts (GPT 6.1 Sol at max effort and Sonnet 5.5 at xhigh). My weekly Gemini budget also limited how many Gemini runs I could do.
+
+The chart shows baseline and assumptions separately for each model and effort setting. Lines connect effort levels within each model; hovering or focusing a marker shows its link to the other prompt. Each scored run has equal weight.
+
+<ResultsExplorer />
+
+The matrix below compares baseline and assumptions at each effort setting. Time and estimated API cost are averages per reviewed run with available data. Expand a row to see the individual results.
+
+<HazardMatrix />
+
+Missing a hazard wasn't just a gap in the write-up. The grader's adapted exploits fully drained every contract whose agent didn't recognise the hazard being exploited.
+
+No agent implemented the rounding fix: none of the 75 submissions used the corrected pricing formula in the final exchange. Eleven proposed a correction and 22 added partial guards; ten did both.
+
+## Evaluation
+
+The assumptions runs recognised more of these problems overall, but the difference wasn't consistent. At least one was recognised in 25 of 35 assumptions runs, compared with 17 of 40 baseline runs. All three were recognised in five assumptions runs and two baseline runs.
+
+Opus 5.5 recognised all three in every reviewed assumptions run: three at medium effort and two at high. Its baseline scores were 78% and 56% respectively. For high-effort GPT 6 Astra, the score went from 0% to 44%; for GPT 6.1 Sol, from 33% to 44%. Both recognised deferred values in all three assumptions runs, but dispatch replacement in only one.
+
+Sonnet 5.5's high-effort score barely changed: 22% with the baseline and 20% with assumptions. Neither group recognised dispatch replacement or deferred values. Higher effort also didn't produce a consistent improvement across the models.
+
+Opus 5.5 had the strongest recognition scores in this experiment. Its medium and high effort assumptions runs tied at 100%; across both prompts, medium effort scored 89% and high effort 73%.
+
+Writing down an assumption can lead the agent to test it. In the dispatch example above, the agent used the experiment to change its design and avoid passing reserve references to transaction-selected code.
+
+These are small samples, and the prompt explicitly asks agents to explain their assumptions, so some of the improvement may be better reporting. The models also use different harnesses, and I ran these evaluations on personal subscriptions, which limited how many runs I could do.
+
+So can we trust an agent with an unfamiliar problem? Not on the strength of a confident explanation. Every contract whose agent missed a hazard was drained, and nothing in a missed hazard's write-up warned that it was coming. Higher effort settings didn't reliably help. What helped most was asking the agent to write down what it believed about the runtime: some of those beliefs became experiments, and the experiments found behaviour the spec didn't describe.
+
+Even then, the agents followed the brief over their own findings. Eleven noticed the pricing bug and proposed a fix, and none shipped it.
+
+In real work we get one run, not an average over dozens. By asking for an assumptions log, we get to review a list of verifiable claims about the runtime, instead of a handwavy explanation.
+
+An interesting follow-up would be to give the models these implementations as reviewers and see whether they find the vulnerabilities they wrote.

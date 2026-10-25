@@ -58,7 +58,11 @@ for (const path of ["index.html", "posts/index.html", "404.html", "feed.xml", "r
 }
 assert.equal(readFileSync(join(dist, "CNAME"), "utf8").trim(), "blog.csongor.co.uk");
 assert(!existsSync(join(dist, "interactive-example")), "Draft example leaked into production");
+// The public RUNBOOK download shares this directory with the post's route.
+assert(existsSync(join(dist, "loom/index.html")), "Missing Loom post");
+assert(existsSync(join(dist, "loom/RUNBOOK.md")), "Missing Loom RUNBOOK");
 const feed = readFileSync(join(dist, "feed.xml"), "utf8");
 for (const post of legacy) assert(feed.includes(`/${post.slug}/`), `${post.slug}: missing from feed`);
 assert(!feed.includes("interactive-example"), "Draft leaked into feed");
+assert(feed.includes("/loom/"), "Loom post missing from feed");
 console.log(`Verified ${legacy.length} legacy URLs, ${blockCount} code blocks, historical headings, internal links, feeds, search output and draft exclusion.`);

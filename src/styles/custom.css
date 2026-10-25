@@ -93,15 +93,32 @@ html[data-theme="dark"] .shiki-inline span {
 #article .callout[data-callout="note"] > .callout-content { margin: 0; padding: 0; }
 #article .callout[data-callout="note"] .callout-content > :first-child { margin-top: 0; }
 #article .callout[data-callout="note"] .callout-content > :last-child { margin-bottom: 0; }
-@media (min-width: 1440px) {
-  #article > .callout[data-callout="note"] {
+#article .footnote-sidenote { display: none; }
+#article :is(.footnote-sidenote, .footnotes li) {
+  scroll-margin-block: 2rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  #article :is(.footnote-sidenote, .footnotes li) {
+    transition: background-color 180ms ease-out;
+  }
+}
+#article :is(.footnote-sidenote, .footnotes li):is(.footnote-active, :target) {
+  background: var(--border);
+}
+@media screen and (min-width: 1440px) {
+  #article > .callout[data-callout="note"][data-margin-note],
+  #article .footnote-sidenote {
     --note-width: min(15rem, calc((100vw - var(--layout-width)) / 2 - 3rem));
     float: right;
     clear: right;
     width: var(--note-width);
     margin: .25rem calc(-1 * (var(--note-width) + 2rem)) 1.5rem 2rem;
   }
+  #article .footnote-sidenote { display: block; }
+  #article[data-responsive-footnotes] .footnotes [data-sidenote],
+  #article[data-responsive-footnotes] .footnotes[data-all-sidenotes] { display: none; }
 }
+@media print { #article .footnote-sidenote { display: none; } }
 
 /* Quiet, consistent spacing across the index and long-form pages. */
 body { -webkit-font-smoothing: antialiased; }

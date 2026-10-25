@@ -1,0 +1,80 @@
+---
+import { Code } from "astro:components";
+import loom from "../../syntax/loom.tmLanguage.json";
+import { monochromeLight, monochromeDark } from "../../syntax/monochrome";
+import replay from "../../data/loom/walkthroughs.json";
+import "./loom.css";
+const themes = { light: monochromeLight, dark: monochromeDark };
+---
+<loom-walkthrough class="block">
+  <figure class="loom-figure loom-walkthrough-figure not-prose">
+    <figcaption><span class="loom-kicker">Runtime experiments</span>What the agent tried</figcaption>
+    <div class="loom-demo-tabs" data-demo-tabs hidden role="group" aria-label="Choose a runtime experiment">
+      {replay.examples.map((example, index) => <button type="button" data-demo={example.id} aria-pressed={index === 0 ? "true" : "false"}>{example.title}</button>)}
+    </div>
+    <div class="loom-demo-content">
+    <div data-stepper class="loom-stepper" hidden>
+      <output data-step-count aria-live="polite">Step 1</output>
+      <div class="loom-stepper-actions">
+        <button type="button" data-previous disabled>Previous</button>
+        <button type="button" data-next>Next step</button>
+        <button type="button" data-restart>Restart</button>
+      </div>
+    </div>
+    {replay.examples.map(example => <section data-panel={example.id} aria-label={example.title}>
+      <p class="loom-question">{example.question}</p>
+      <ol class="loom-steps">
+        {example.steps.map((step, index) => <li class="loom-step" data-step={index}>
+          <header class="loom-step-heading">
+            <span class="loom-step-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+            <h3>{step.title}</h3>
+          </header>
+          <p class="loom-step-description">{step.body}</p>
+          <div class="loom-step-code">
+            <span class="loom-kicker">Code</span>
+            <Code code={step.code} lang={loom} themes={themes} defaultColor={false} />
+          </div>
+          <div class="loom-step-result">
+            <span class="loom-kicker">{"stateLabel" in step ? step.stateLabel : "Observed state"}</span>
+            <pre class="loom-state">{step.state}</pre>
+          </div>
+        </li>)}
+      </ol>
+      <div class="loom-takeaway" data-takeaway><span class="loom-kicker">What this shows</span><p>{example.takeaway}</p></div>
+      <details><summary>Read the full Loom excerpt</summary><Code code={example.code} lang={loom} themes={themes} defaultColor={false} /></details>
+    </section>)}
+    </div>
+    <noscript><p class="loom-caption">All steps are shown. JavaScript enables stepping through each experiment.</p></noscript>
+  </figure>
+</loom-walkthrough>
+<script>
+  class LoomWalkthrough extends HTMLElement {
+    connectedCallback() {
+      if (this.dataset.ready) return;
+      this.dataset.ready = "true";
+      const panels = [...this.querySelectorAll<HTMLElement>("[data-panel]")];
+      const tabs = [...this.querySelectorAll<HTMLButtonElement>("[data-demo]")];
+      const previous = this.querySelector<HTMLButtonElement>("[data-previous]")!;
+      const next = this.querySelector<HTMLButtonElement>("[data-next]")!;
+      let active = 0;
+      let step = 0;
+      const render = () => {
+        panels.forEach((panel, index) => { panel.hidden = index !== active; tabs[index].setAttribute("aria-pressed", String(index === active)); });
+        const steps = [...panels[active].querySelectorAll<HTMLElement>("[data-step]")];
+        steps.forEach((item, index) => { item.hidden = index !== step; if (index === step) item.setAttribute("aria-current", "step"); else item.removeAttribute("aria-current"); });
+        panels[active].querySelector<HTMLElement>("[data-takeaway]")!.hidden = step !== steps.length - 1;
+        previous.disabled = step === 0;
+        next.disabled = step === steps.length - 1;
+        this.querySelector("[data-step-count]")!.textContent = `Step ${step + 1} of ${steps.length}`;
+      };
+      tabs.forEach((button, index) => { button.onclick = () => { active = index; step = 0; render(); }; });
+      previous.onclick = () => { step--; render(); };
+      next.onclick = () => { step++; render(); };
+      this.querySelector<HTMLButtonElement>("[data-restart]")!.onclick = () => { step = 0; render(); };
+      this.querySelector<HTMLElement>("[data-demo-tabs]")!.hidden = false;
+      this.querySelector<HTMLElement>("[data-stepper]")!.hidden = false;
+      render();
+    }
+  }
+  if (!customElements.get("loom-walkthrough")) customElements.define("loom-walkthrough", LoomWalkthrough);
+</script>

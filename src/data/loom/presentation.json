@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "source": "Author clarification, 25 October 2026",
+  "omitted_attempts": [
+    {
+      "run_id": "1792155945-8b3fe3bbaf66-loom-build__hard-nosrc-covert-antigravity",
+      "reason": "Author interrupted this Gemini baseline attempt because of other issues; omitted from the article at the author's request."
+    },
+    {
+      "run_id": "1792157098-c2494587540e-loom-build__hard-nosrc-covert-antigravity",
+      "reason": "Author interrupted this Gemini baseline retry because of other issues; omitted from the article at the author's request."
+    },
+    {
+      "run_id": "1792159616-70049bb98bf4-loom-build__hard-nosrc-covert-claude-code",
+      "reason": "Interrupted Opus high-effort assumptions attempt; omitted from the article at the author's request."
+    },
+    {
+      "run_id": "1792851705-f8a117565da7-loom-build__hard-nosrc-covert-claude-code",
+      "reason": "Interrupted Opus high-effort assumptions attempt; omitted from the article at the author's request."
+    }
+  ],
+  "run_notes": [
+    {
+      "run_id": "1792152948-361fd364b07a-loom-build__hard-nosrc-covert-antigravity",
+      "note": "Aborted after an HTTP 500 error."
+    },
+    {
+      "run_id": "1792163733-5affaeefbcf2-loom-build__hard-nosrc-covert-antigravity",
+      "note": "Stopped when the author's weekly budget ran out, ending the original Gemini sweep; a further batch ran on 25 October."
+    },
+    {
+      "run_id": "1792885272-a35c519164dc-loom-build__hard-nosrc-covert-antigravity",
+      "note": "API EOF after submission was captured. Reviewed, but excluded from scores and averages because the run ended in agent_error."
+    }
+  ]
+}

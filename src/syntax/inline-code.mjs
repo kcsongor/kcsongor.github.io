@@ -1,7 +1,7 @@
 import { bundledLanguages, createHighlighter } from "shiki";
 
 const plainLanguages = new Set(["text", "txt", "plain", "plaintext"]);
-const supported = lang => lang === "cachet" || Object.hasOwn(bundledLanguages, lang) || plainLanguages.has(lang);
+const supported = lang => ["cachet", "loom"].includes(lang) || Object.hasOwn(bundledLanguages, lang) || plainLanguages.has(lang);
 const normalize = lang => plainLanguages.has(lang) ? "text" : lang;
 
 function visit(node, callback) {

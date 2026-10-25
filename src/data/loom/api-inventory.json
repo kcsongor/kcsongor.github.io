@@ -1,0 +1,226 @@
+{
+  "source": "results/2026-10-24-claude-effort/proofs/API-INVENTORY.md",
+  "source_sha256": "fac01e0e486390cb786bcc11cd7d0bcf8dced234beaccb44c0827d45a2c97ea0",
+  "runs": 113,
+  "shapes": 87,
+  "signature_variants": 62,
+  "passing_shapes": 84,
+  "failing_shapes": 3,
+  "operations": [
+    {
+      "name": "Split",
+      "variants": [
+        {
+          "signature": "split(&mut Self,u64):Self",
+          "runs": 60,
+          "passing": 58
+        },
+        {
+          "signature": "split(Self,u64):(Self,Self)",
+          "runs": 31,
+          "passing": 30
+        },
+        {
+          "signature": "take(&mut Self,u64):Self",
+          "runs": 20,
+          "passing": 19
+        },
+        {
+          "signature": "withdraw(&mut Self,u64):Self",
+          "runs": 14,
+          "passing": 14
+        },
+        {
+          "signature": "withdraw(Signer,u64):Self",
+          "runs": 10,
+          "passing": 10
+        },
+        {
+          "signature": "draw(&mut Self,u64):Self",
+          "runs": 3,
+          "passing": 3
+        },
+        {
+          "signature": "draw(Signer,u64):Self",
+          "runs": 2,
+          "passing": 2
+        }
+      ]
+    },
+    {
+      "name": "Merge",
+      "variants": [
+        {
+          "signature": "merge(&mut Self,Self)",
+          "runs": 32,
+          "passing": 30
+        },
+        {
+          "signature": "join(&mut Self,Self)",
+          "runs": 28,
+          "passing": 28
+        },
+        {
+          "signature": "merge(Self,Self):Self",
+          "runs": 27,
+          "passing": 26
+        },
+        {
+          "signature": "combine(&mut Self,Self)",
+          "runs": 8,
+          "passing": 8
+        },
+        {
+          "signature": "join(Self,Self):Self",
+          "runs": 5,
+          "passing": 5
+        }
+      ]
+    },
+    {
+      "name": "Read value",
+      "variants": [
+        {
+          "signature": "value(&Self)",
+          "runs": 78,
+          "passing": 76
+        },
+        {
+          "signature": "balance(address)",
+          "runs": 59,
+          "passing": 59
+        },
+        {
+          "signature": "balance_of(address)",
+          "runs": 22,
+          "passing": 21
+        },
+        {
+          "signature": "balance(&Self)",
+          "runs": 11,
+          "passing": 10
+        },
+        {
+          "signature": "amount(&Self)",
+          "runs": 4,
+          "passing": 4
+        },
+        {
+          "signature": "size(&Self)",
+          "runs": 4,
+          "passing": 4
+        },
+        {
+          "signature": "read(&Self)",
+          "runs": 3,
+          "passing": 3
+        }
+      ]
+    },
+    {
+      "name": "Pay",
+      "variants": [
+        {
+          "signature": "deposit(address,Self)",
+          "runs": 101,
+          "passing": 98
+        },
+        {
+          "signature": "transfer(&mut Self,address,u64)",
+          "runs": 28,
+          "passing": 28
+        },
+        {
+          "signature": "pay(&mut Self,address,u64)",
+          "runs": 5,
+          "passing": 4
+        },
+        {
+          "signature": "transfer(Signer,address,u64)",
+          "runs": 4,
+          "passing": 4
+        },
+        {
+          "signature": "pay(Signer,address,u64)",
+          "runs": 2,
+          "passing": 2
+        }
+      ]
+    },
+    {
+      "name": "Mint",
+      "variants": [
+        {
+          "signature": "mint(Signer,address,u64)",
+          "runs": 44,
+          "passing": 43
+        },
+        {
+          "signature": "mint(Signer,u64):Self",
+          "runs": 19,
+          "passing": 18
+        },
+        {
+          "signature": "issue(Signer,address,u64)",
+          "runs": 14,
+          "passing": 14
+        },
+        {
+          "signature": "mint_to(Signer,address,u64)",
+          "runs": 1,
+          "passing": 0
+        }
+      ]
+    },
+    {
+      "name": "Supply",
+      "variants": [
+        {
+          "signature": "total_supply()",
+          "runs": 10,
+          "passing": 10
+        },
+        {
+          "signature": "supply()",
+          "runs": 4,
+          "passing": 4
+        }
+      ]
+    },
+    {
+      "name": "Authority/ledger",
+      "variants": [
+        {
+          "signature": "issuer()",
+          "runs": 3,
+          "passing": 3
+        },
+        {
+          "signature": "ledger()",
+          "runs": 1,
+          "passing": 1
+        },
+        {
+          "signature": "lock(address,Self)",
+          "runs": 1,
+          "passing": 1
+        }
+      ]
+    },
+    {
+      "name": "Zero/cleanup",
+      "variants": [
+        {
+          "signature": "zero():Self",
+          "runs": 1,
+          "passing": 1
+        },
+        {
+          "signature": "destroy_zero(Self)",
+          "runs": 1,
+          "passing": 1
+        }
+      ]
+    }
+  ]
+}

@@ -39,6 +39,15 @@ function monochrome(
         scope: ["constant", "string"],
         settings: { foreground: accent, fontStyle: "" },
       },
+      // Move's grammar labels the module declaration name as a constant.
+      {
+        scope: "meta.module.move constant.other.move",
+        settings: { foreground, fontStyle: "" },
+      },
+      {
+        scope: "meta.module_scope.move constant.other.move",
+        settings: { foreground: accent, fontStyle: "" },
+      },
       {
         scope: ["constant.other.haskell", "constant.other.purescript", "constant.other.constructor"],
         settings: { foreground: strong, fontStyle: "bold" },

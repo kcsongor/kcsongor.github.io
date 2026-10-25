@@ -1,0 +1,22 @@
+---
+interface Props {
+  variants: { signature: string; runs: number; passing: number }[];
+  total: number;
+}
+const { variants, total } = Astro.props;
+---
+<ul class="loom-signatures" role="list">
+  {variants.map(variant => <li title={`${variant.passing} of these ${variant.runs} submissions passed all four smoke checks; not a security verdict.`}>
+    <div class="loom-signature-label"><code>{variant.signature}</code><span aria-label={`${variant.runs} of ${total} submissions`}>{variant.runs}</span></div>
+    <div class="loom-signature-track" aria-hidden="true"><span style={`width: ${variant.runs / total * 100}%`}></span></div>
+  </li>)}
+</ul>
+<style>
+  #article .loom-signatures { list-style: none; padding: 0; margin: .9rem 0; display: grid; gap: 1rem; }
+  #article .loom-signatures li { margin: 0; padding: 0; }
+  .loom-signature-label { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; margin-bottom: .35rem; }
+  #article .loom-signature-label code { min-width: 0; overflow-wrap: anywhere; background: none; padding: 0; color: var(--foreground); font: .6875rem/1.6 var(--font-code); }
+  .loom-signature-label > span { flex-shrink: 0; font: .75rem/1.6 var(--font-code); font-variant-numeric: tabular-nums; }
+  .loom-signature-track { height: .3rem; background: var(--muted); }
+  .loom-signature-track > span { display: block; height: 100%; background: var(--figure-accent); }
+</style>

@@ -1,0 +1,591 @@
+{
+  "schema_version": 1,
+  "pricing_checked": "2026-10-25",
+  "currency": "USD",
+  "openai_rates_per_million": {
+    "gpt-6.1-sol": {
+      "input": 2,
+      "cached": 0.1,
+      "output": 10
+    },
+    "gpt-6-astra": {
+      "input": 10,
+      "cached": 1,
+      "output": 50
+    }
+  },
+  "sources": [
+    "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "https://developers.openai.com/api/docs/models/gpt-6-astra",
+    "https://platform.claude.com/docs/en/about-claude/pricing"
+  ],
+  "rows": [
+    {
+      "run_id": "1792105447-0baaa7e35752-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.3831668,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "fae9102ec8f2d7ab8c9052c82e61a5cbda2dd1fb88c1fc35b50659b270277e2f"
+    },
+    {
+      "run_id": "1792137471-3e4db4ab3c64-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 2.2546334,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "e6af75135402daa0aead844f1e2d159632ec35cabe37fa472cf91b465d46b1f9"
+    },
+    {
+      "run_id": "1792139780-c3f3425693c4-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 2.468956,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "41f785bbc05262479857bfb988770e7bda73a8bfe04465ec0ba2b012c464da70"
+    },
+    {
+      "run_id": "1792139780-f50b92568409-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.3973052,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "2cc9c1bb046cc7eed3e6096778ae30cf376f98db718580a2893e4f00f41b1829"
+    },
+    {
+      "run_id": "1792140381-9cc456a1ca00-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.395908,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "7b4f6e399008abb7cbc3ad77ce01edb97bccfd0c0503bb01f146747c9f3bd3d9"
+    },
+    {
+      "run_id": "1792140536-0b82be878860-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 1.3542632000000003,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "32fb8584d96b6f25d4567c7aa75c732a5c14bf2315a0fbf97894b44eac2ffb7a"
+    },
+    {
+      "run_id": "1792140935-b4ef7d73757a-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 1.366594,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "2dfe8b720b015ecba1bdae88ed38a0c6b6a8dc553d51475860617aabb6db7dc9"
+    },
+    {
+      "run_id": "1792141416-e4a0b775e80b-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 1.547942,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "4e66cefeca859ff8cdf5614a1e3f45d1b55d5bdde6e95c1bf52af7ac0a5cadf0"
+    },
+    {
+      "run_id": "1792141929-629a1fdedca5-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 0.976028,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "322e8fe3e0760d6e2c4008a681d66a35e930f96d4fcc00b17b0136db14aad944"
+    },
+    {
+      "run_id": "1792146151-9a0f45d96473-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.2434982,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "2f63483e3390472ee40cb8e64f1acc1c0062aec9d0c85c41b623596b869334e5"
+    },
+    {
+      "run_id": "1792146887-fe22750714df-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.4071053,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "9e6377c34d18121620ad30574bcb2ecc77a25e6eabecd933f3f5a265ec9a3c7b"
+    },
+    {
+      "run_id": "1792147068-ee0c46cb6155-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.3689067,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "0836480019924d12f4a6d66257d179e0aeb838e584020b2617615ed80263a738"
+    },
+    {
+      "run_id": "1792147237-90ce0a8f7e5b-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.3594091,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "af1f6aba0e63c2acfdd2c4eafc58cb26b3e945a1c7edd24670288d076ad84173"
+    },
+    {
+      "run_id": "1792148663-5c185ff01f15-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 4.927104600000001,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "08299eaacdf7042fdf79dd66b20c598124964bc6dd6ea20b60ed55eb9e5a2a16"
+    },
+    {
+      "run_id": "1792152948-361fd364b07a-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "1c0d73733f669b895110d0ea1e2f9f296f86641f1e2ce78f3adbdcb1e8c2e5a0"
+    },
+    {
+      "run_id": "1792153587-2ccd69eada54-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "96a6ca51e252152811dd0c3e3cb553a754d00f4a70c1912e2948ec9efbf47ca3"
+    },
+    {
+      "run_id": "1792154868-b9748daf828f-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "af50efe92795db9938f0fc200e03fe237ca9be5c310f1dff63506d28911c7995"
+    },
+    {
+      "run_id": "1792159615-33037689059b-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "d7a90ccdb1881e14223f15be7ffd5c43b1c2edba42a1af31deae406624a2d314"
+    },
+    {
+      "run_id": "1792159624-fe46fbc3fa8f-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.7697052,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "9adb410caa5cc892279fc9d68f3c3f9feb4d3a1c06e0216c706e11a67d1fd520"
+    },
+    {
+      "run_id": "1792159679-45c931aa5f21-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.44426889999999997,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "066ec3ab6e9c1e91ef36811a2e202ac170512149927f7a14937fcb1cf1c1bc82"
+    },
+    {
+      "run_id": "1792159873-f8a52ce04d1d-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 4.2295848000000005,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "5eee69cb2045c460dd0454bf36ae71dd1754a33feab1ea8f8473cbad549b6066"
+    },
+    {
+      "run_id": "1792160842-0c401129efe6-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 1.750234,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "2f8d0d4730ea79406dfdf5cd8235f4ec2ddad70df7ad5405b7098023bdb65a6a"
+    },
+    {
+      "run_id": "1792162390-1c4af7fce84e-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "cfe3498295dc3ec5dfa80a66d8653b3b7a78ec4124cbcbd486e31b873c6c4ab1"
+    },
+    {
+      "run_id": "1792162390-26aaf670c016-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.39742,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "744760a7a9e9a0e59a3c2ddbf6a37f1d0760aa3863c19833217cf0bec0d87004"
+    },
+    {
+      "run_id": "1792162392-b0637789386b-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 3.1739325999999997,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "08e60cd16655d4c8c172f925eacf5f6ab093f3662b755a607216bb2c6042f3b4"
+    },
+    {
+      "run_id": "1792162977-1ce1041051fe-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 1.825382,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "e5f93298080ec9e37bef3023c47233e74eb6bc964a88384f14d9c749b6a95add"
+    },
+    {
+      "run_id": "1792163288-88deb839d842-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.42547089999999993,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "701a6b93115c3523f4aab098b05bea7ff5303e103180892ee44d503a202bfb31"
+    },
+    {
+      "run_id": "1792163496-3f19b8023c25-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 3.6523362,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "14a75261ef66c77447d3b6ba5c8ff32195f44897605e88f1d841b5bdb80a8776"
+    },
+    {
+      "run_id": "1792163637-c04017294ce8-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.3876712,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "54760688129cc69bb872b110be1ba5d752c007a99c05f95eaf860aae70a2d774"
+    },
+    {
+      "run_id": "1792163733-5affaeefbcf2-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "ef092a7e1e9e919ca012e0354f48112ea445bfc3dd3eb811111d277337942444"
+    },
+    {
+      "run_id": "1792164161-5d4b95502cbb-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 3.90684,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "9f832ee81fde1d2f087a496d8e041af7cfa9ea30d7ad6299a3b039f21db1e6a0"
+    },
+    {
+      "run_id": "1792164497-cb3ab1947420-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.41381260000000003,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "ca6ba347ed6916d86dd8e81c9b2ae2a62ceab7e489fd57b021eb79429a527862"
+    },
+    {
+      "run_id": "1792521071-a0cee3703e18-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 1.126552,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "e8cb4bcb7f29d423f35a0a2acae014a4625c1ef1437fd0d77a7592bf3e7bb7b8"
+    },
+    {
+      "run_id": "1792521405-1369b384cbf9-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.3172644,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "edcb40a1de6e03e96c7a12e82e1ed4b2ddf5c04934862ca6f8cf3befc1daf77b"
+    },
+    {
+      "run_id": "1792521826-3f9f50082119-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.5996088,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "33c1f39912858b8c4857afe7a4a4bc905d3a8aa5ce7330ee814ed1081f6741fd"
+    },
+    {
+      "run_id": "1792522661-f6f35dae6b63-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.4603912,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "95c29f21cc537440dc049ce035d73324add3f36d5a5db9c21f441d7aa0cdcb2d"
+    },
+    {
+      "run_id": "1792523304-4450f32a5123-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.5635388,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "ff04d4e104add79bf1bf2811f228d115da7e1fc2146549869571737dfe20acd6"
+    },
+    {
+      "run_id": "1792523983-a2fb3b31ea04-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 2.50755,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "1aa1127dfe10d05737422d0aec9927645aa4778a5ca144c39c9be924b33b95b7"
+    },
+    {
+      "run_id": "1792524776-f27f05cb693f-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 0.929562,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "73cd339b6989d1cf22b75703a06eb028f361f237c6f7cf2b499dfc855a884c6a"
+    },
+    {
+      "run_id": "1792525053-f0d4c9200406-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 3.396544,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "9c51ee9f30e79ab9bda13e82c5dda5b1c760b7413c20e310cabbbe7b50cbe065"
+    },
+    {
+      "run_id": "1792526034-23a3ca8ad2df-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 0.822498,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "278b9338d9c6089a334d367d658fc88328aea3801d8bf0bdbad65a49612bb36b"
+    },
+    {
+      "run_id": "1792526252-3fb71e569099-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 0.94208,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "763b7637e8eec319a51798b54f51b1703a949fa2525d5d3436f846961461309b"
+    },
+    {
+      "run_id": "1792526423-cfbd30044685-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.6742996,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "db8ef69e311abba9bfcd77171bb3a90dfdfbe60016f07a81ee824febbffe3550"
+    },
+    {
+      "run_id": "1792527237-c389df07dd30-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.6998348000000001,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "3352692354ded326f560dfc677d49f746c6990ec878d703ead463bc7fdfa5c93"
+    },
+    {
+      "run_id": "1792528035-04b073f6a65b-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 2.63544,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "aa0551c095108f3f882fd0959d574f31f934030bd306d30f9fb07f6b5e61213a"
+    },
+    {
+      "run_id": "1792528819-f8e6bd8faaa4-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.26945040000000003,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "525150cd4a48117eb0eafa52c51088740fdfded85638301ed14f3c33942a1fc5"
+    },
+    {
+      "run_id": "1792529181-1d936f8f3707-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.2230936,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "b429d4aaff663d4babe734836c84ca68a1bb926a221bef8e3cf5fd51b2338e9e"
+    },
+    {
+      "run_id": "1792529476-a999e787cad3-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": null,
+      "basis": "missing_usage",
+      "source_sha256": "82c62992b347f7f91aaccc8a4f4afaac40362ab639a375e0a400efbf5a8b87dc"
+    },
+    {
+      "run_id": "1792569808-7dfdf0c3e2cb-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 1.394154,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "94869e10853736d50c44dbe6155c982cb95e6ad03bbc7bb74c36632dae95d67c"
+    },
+    {
+      "run_id": "1792570237-bcdc5b3f2da3-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 0.746664,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "33cece04edb022faa9f83e8d1067ad8fa5448983011afc0b95dccc776d2aa704"
+    },
+    {
+      "run_id": "1792570483-0b18cd545e49-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.661006,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "7cf5e063036f3a30f99e1d8f60f8a1bd3f66a2c74f1b9cb838297be0ea460e2a"
+    },
+    {
+      "run_id": "1792571669-eb1d93e5534d-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 2.436278,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "56f1b7cfd687122fe4944734826dd9d577506452b09b9c4a1713a6c17fc83170"
+    },
+    {
+      "run_id": "1792572542-a916dbfd0e23-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.215486,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "85830baf3e7bab803b498c4ce0ef0b6ba1113a3a321e7cfa61f829cf96edd40c"
+    },
+    {
+      "run_id": "1792572984-0d2aff54000c-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": null,
+      "basis": "missing_usage",
+      "source_sha256": "84ce94e56392a07305e37cecac5449e59066661ab5967878d4249911fc5e73dc"
+    },
+    {
+      "run_id": "1792576318-50a638a195b6-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6-astra",
+      "usd": 5.561468,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "1922d2a75d754d9b0ef248f40d48eb3435893fa7c936b7ff98a2b18fe9a34e6c"
+    },
+    {
+      "run_id": "1792578352-c746f7ff7a4f-loom-build__hard-nosrc-covert-codex",
+      "model": "gpt-6.1-sol",
+      "usd": 0.3327432,
+      "basis": "standard_short_context_estimate",
+      "source_sha256": "a58bd293662b992e2580212ee9fd53e3757c659b2a478ed515b45b192a7e6661"
+    },
+    {
+      "run_id": "1792847952-cb9fc25b5945-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 4.251099,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "cf4d3c9fdb61337d45f999a851fdca0d5f0f5d95ef6649872079b614e43126f1"
+    },
+    {
+      "run_id": "1792849092-d637a7ae89a6-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 3.2327477999999994,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "5a8bca5db720ed7136f14824694bf5fa8df814bcb2a21f1ba2c832be036b9ddd"
+    },
+    {
+      "run_id": "1792849993-2f2e4f070d8f-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 4.505590000000001,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "0ec6a4e9a40e2e1f2731b21935d77394c9f7b901dd046f1097dc512e793ab8e7"
+    },
+    {
+      "run_id": "1792851161-6794ceb947dd-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-opus-5-5",
+      "usd": 1.9515319999999996,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "5f8a67a54ee8019db0a344a264470298924cfcf21744e3b8ee5b9d109e384c9d"
+    },
+    {
+      "run_id": "1792852825-b7905801d8e4-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.4975824,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "91311f229f907dbf05bdce17e54aa3e9dd80d418a724d841b908bc57de50749b"
+    },
+    {
+      "run_id": "1792853034-067b2ea52c5a-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 3.7403607,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "595628316e3650226652cf216f16a6c873643296bfc382cf1ac6e0f6e0fec236"
+    },
+    {
+      "run_id": "1792854704-5f4e26744f36-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 2.2089854,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "32397bb1c386abc80c37a8c80fc9d445107f1298e3e724cfda5b30b0deff4927"
+    },
+    {
+      "run_id": "1792855665-74275eef8527-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.24664319999999998,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "774efbd76370dbab40b325d86685164071fd5173ab052b53c45ece7a8467a85a"
+    },
+    {
+      "run_id": "1792855767-7a3c2915ce04-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.2717983,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "7fac01e79c33a14a30d1f4ec716b1d7daa18adb884fe58998a3c0e98de92fac1"
+    },
+    {
+      "run_id": "1792855885-d41fbbb91898-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.4138905,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "6c090b1f3c48356a95d1dc2ebc547769b5b251a1d5b828b05d556a8f7a274cca"
+    },
+    {
+      "run_id": "1792856061-ee1558ba022f-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.449036,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "5ee4fd5b9127a7b5bbc06f129c59bc2d7b86aa4d28bd42a77c942424a2b22cc6"
+    },
+    {
+      "run_id": "1792856261-bb7e5c8d3e54-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.4359295999999999,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "2cde3fa5b4eba73b1cede7cada4a1e0120745f7114a9a9e8b57d121835e809fb"
+    },
+    {
+      "run_id": "1792856459-6bbc583b0715-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.2160477,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "2991db91f5a1952bd83d9faf16ff970078c3babd2d0317507cf383fc170a5ffe"
+    },
+    {
+      "run_id": "1792856564-093f0faecfcd-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.21072840000000004,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "581e308361f1cadeeb744bddf7299658610739225cf273559da0693d776a97e4"
+    },
+    {
+      "run_id": "1792856668-e98fd78cde85-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 1.6263563000000008,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "212db7445243b9851037c272a5467bab60a0b320b2827f4e127ab2e2f774aa6d"
+    },
+    {
+      "run_id": "1792857325-13fdd4eeaee2-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 5.4476672,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "0dbd5d235419c0c94181c63aecd6eb7d3a466f795c2c558017ad2ed2690742e6"
+    },
+    {
+      "run_id": "1792859362-eab91bb658bb-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.40320100000000003,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "96197b626c485d6ac32d9d0fd8a218ed3bd1ade41cea31f2c084eaffa06984d5"
+    },
+    {
+      "run_id": "1792859554-7deb6dc3f780-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 2.3723676999999994,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "660cad9c9b68704f0ae2fcbba6b15b23f268ee8c1ad30334c77560ba89f95483"
+    },
+    {
+      "run_id": "1792860537-14586640dc53-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.32517060000000003,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "76c1813ceca88d03cec081f7d5a8d4cd3d39f9908f1142ef0b72c6680d36106c"
+    },
+    {
+      "run_id": "1792860667-8ae2c0946838-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": 0.2511881,
+      "basis": "cli_list_price_estimate",
+      "source_sha256": "bcaa04d0d0de234165cc0f3b8bd26ce8290652b502f764b3149789c5a796a292"
+    },
+    {
+      "run_id": "1792860776-c032bceee08f-loom-build__hard-nosrc-covert-claude-code",
+      "model": "claude-sonnet-5-5",
+      "usd": null,
+      "basis": "missing_usage",
+      "source_sha256": "700a59a98aea89134a85aaf6bb6840402e0c786e87a5099d4a5b858004dded37"
+    },
+    {
+      "run_id": "1792882529-7377128638eb-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "e265f430588312803ad2ff1b97726dcbb7f2b8a7a1011dcf8a763a012411fc99"
+    },
+    {
+      "run_id": "1792883253-45346a689724-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "e4b3841afa586d2327bdb88548c7555bfb320786f39b21044b3e945764359123"
+    },
+    {
+      "run_id": "1792884450-c7316653dc7c-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "e8fead0255592322339754b9079c686abce167aeca207c345db6787abff1e67c"
+    },
+    {
+      "run_id": "1792885272-a35c519164dc-loom-build__hard-nosrc-covert-antigravity",
+      "model": "gemini-4-argon-high",
+      "usd": null,
+      "basis": "unresolved_token_accounting",
+      "source_sha256": "e67f7b1c0c897035d6568a5489f85e7fe0cf6c661ffe0af55174ecb71987c0d1"
+    }
+  ]
+}
