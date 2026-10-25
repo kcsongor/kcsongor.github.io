@@ -135,7 +135,7 @@ We ask the agent to design an asset interface, implement two assets, and build a
 Each attempt starts in a fresh container with the same handout, examples, skeleton modules, and the compiled interpreter. The agent doesn't have access to the interpreter's source code and is given 45 minutes to complete the task.
 The brief asks for access control, but doesn't point out these problems.
 
-We run the task with two versions of the prompt: the baseline instruction, and the same instruction with an extra paragraph asking for an assumptions log.
+We run the task with two versions of the prompt: the `baseline{:text}` instruction, and `assumption-log{:text}`, which adds a paragraph asking for an assumptions log.
 
 <ExperimentSetup />
 
@@ -161,7 +161,7 @@ Rounding the payout down would pay 90 Silver instead, but would contradict the b
 
 ## Experiments from a recorded run
 
-The following walkthroughs replay experiments from one Opus 5.5 high-effort run with the assumptions instruction. They show how the agent investigated these behaviours and the pricing formula. The dispatch example drains a deliberately naive pool built for the experiment, not the agent's final exchange.
+The following walkthroughs replay experiments from one Opus 5.5 high-effort run with the `assumption-log{:text}` instruction. They show how the agent investigated these behaviours and the pricing formula. The dispatch example drains a deliberately naive pool built for the experiment, not the agent's final exchange.
 
 <HazardWalkthrough />
 
@@ -202,13 +202,13 @@ Below is a sample of the different signatures and how often they appeared, count
 There are 81 included attempts across five models, of which 75 completed and were reviewed. The six failed attempts don't contribute to the scores or averages, even where their captured submissions were reviewed.
 
 > [!NOTE]
-> Of the six failures, three were Gemini (two process errors, including an HTTP 500 on its first baseline run, and one agent error), one was a GPT 6 Astra max-effort process error, and two were timeouts (GPT 6.1 Sol at max effort and Sonnet 5.5 at xhigh). My weekly Gemini budget also limited how many Gemini runs I could do.
+> Of the six failures, three were Gemini (two process errors, including an HTTP 500 on its first `baseline{:text}` run, and one agent error), one was a GPT 6 Astra max-effort process error, and two were timeouts (GPT 6.1 Sol at max effort and Sonnet 5.5 at xhigh). My weekly Gemini budget also limited how many Gemini runs I could do.
 
-The chart shows baseline and assumptions separately for each model and effort setting. Lines connect effort levels within each model; hovering or focusing a marker shows its link to the other prompt. Each scored run has equal weight.
+The chart shows `baseline{:text}` and `assumption-log{:text}` separately for each model and effort setting. Lines connect effort levels within each model; hovering or focusing a marker shows its link to the other prompt. Each scored run has equal weight.
 
 <ResultsExplorer />
 
-The matrix below compares baseline and assumptions at each effort setting. Time and estimated API cost are averages per reviewed run with available data. Expand a row to see the individual results.
+The matrix below compares `baseline{:text}` and `assumption-log{:text}` at each effort setting. Time and estimated API cost are averages per reviewed run with available data. Expand a row to see the individual results.
 
 <HazardMatrix />
 
@@ -218,13 +218,13 @@ No agent implemented the rounding fix: none of the 75 submissions used the corre
 
 ## Evaluation
 
-The assumptions runs recognised more of these problems overall, but the difference wasn't consistent. At least one was recognised in 25 of 35 assumptions runs, compared with 17 of 40 baseline runs. All three were recognised in five assumptions runs and two baseline runs.
+The `assumption-log{:text}` runs recognised more of these problems overall, but the difference wasn't consistent. At least one was recognised in 25 of 35 `assumption-log{:text}` runs, compared with 17 of 40 `baseline{:text}` runs. All three were recognised in five `assumption-log{:text}` runs and two `baseline{:text}` runs.
 
-Opus 5.5 recognised all three in every reviewed assumptions run: three at medium effort and two at high. Its baseline scores were 78% and 56% respectively. For high-effort GPT 6 Astra, the score went from 0% to 44%; for GPT 6.1 Sol, from 33% to 44%. Both recognised deferred values in all three assumptions runs, but dispatch replacement in only one.
+Opus 5.5 recognised all three in every reviewed `assumption-log{:text}` run: three at medium effort and two at high. Its `baseline{:text}` scores were 78% and 56% respectively. For high-effort GPT 6 Astra, the score went from 0% to 44%; for GPT 6.1 Sol, from 33% to 44%. Both recognised deferred values in all three `assumption-log{:text}` runs, but dispatch replacement in only one.
 
-Sonnet 5.5's high-effort score barely changed: 22% with the baseline and 20% with assumptions. Neither group recognised dispatch replacement or deferred values. Higher effort also didn't produce a consistent improvement across the models.
+Sonnet 5.5's high-effort score barely changed: 22% with `baseline{:text}` and 20% with `assumption-log{:text}`. Neither group recognised dispatch replacement or deferred values. Higher effort also didn't produce a consistent improvement across the models.
 
-Opus 5.5 had the strongest recognition scores in this experiment. Its medium and high effort assumptions runs tied at 100%; across both prompts, medium effort scored 89% and high effort 73%.
+Opus 5.5 had the strongest recognition scores in this experiment. Its medium and high effort `assumption-log{:text}` runs tied at 100%; across both prompts, medium effort scored 89% and high effort 73%.
 
 Writing down an assumption can lead the agent to test it. In the dispatch example above, the agent used the experiment to change its design and avoid passing reserve references to transaction-selected code.
 

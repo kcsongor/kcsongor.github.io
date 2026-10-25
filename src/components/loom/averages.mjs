@@ -1,5 +1,5 @@
 import { apiCost } from "./api-cost.mjs";
-import { recognitionCount, modelName, metricLabel, plotRuns } from "./results.mjs";
+import { recognitionCount, modelName, promptName, metricLabel, plotRuns } from "./results.mjs";
 
 const mean = values => values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
 const valid = value => Number.isFinite(value) && value >= 0;
@@ -58,5 +58,5 @@ export function plotModelAverages(rows, metric = "api_cost_usd") {
 }
 
 export function describeAverage(group, metric) {
-  return `${modelName(group.model)} · ${group.effort} · ${group.prompt}: ${Math.round(group.recognition / 3 * 100)}% average runtime recognition, ${metricLabel(group[metric], metric)} average per run, ${group.runs} reviewed runs.`;
+  return `${modelName(group.model)} · ${group.effort} · ${promptName(group.prompt)}: ${Math.round(group.recognition / 3 * 100)}% average runtime recognition, ${metricLabel(group[metric], metric)} average per run, ${group.runs} reviewed runs.`;
 }

@@ -4,7 +4,7 @@ import { plotModelAverages, describeAverage, configurationId, averageId } from "
 import { apiCost } from "./api-cost.mjs";
 import ApiCostNote from "./ApiCostNote.astro";
 import snapshot from "../../data/loom/results.json";
-import { recognitionCount, modelName, modelMarker, plotFrame } from "./results.mjs";
+import { recognitionCount, modelName, promptName, modelMarker, plotFrame } from "./results.mjs";
 const initial = snapshot.rows.map(row => ({ ...row, api_cost_usd: apiCost(row)?.usd ?? null }));
 const plot = plotModelAverages(initial, "duration_seconds");
 const pairConfigurations = [...new Map(initial.map(row => [configurationId(row), { id: configurationId(row), model: row.model }])).values()];
@@ -30,10 +30,10 @@ const options = (key: "model" | "effective_effort") => [...new Set(snapshot.rows
         {options("model").map(model => <span data-model-key={model} hidden={!plot.groups.some(group => group.model === model && points.has(group.run_id))}><svg class="loom-model-key" data-model={model} viewBox="-12 -12 24 24" aria-hidden="true"><path d={modelMarker(model)} /></svg>{modelName(model)}</span>)}
       </div>
     </div>
-    <div class="loom-prompt-legend" aria-label="Prompt markers"><span><svg viewBox="0 0 32 16" aria-hidden="true"><path d="M0 8H32" stroke-dasharray="3 3" /><circle cx="16" cy="8" r="5" /></svg>Baseline</span><span><svg viewBox="0 0 32 16" aria-hidden="true"><path d="M0 8H32" /><circle cx="16" cy="8" r="5" class="is-filled" /></svg>Assumptions</span></div>
+    <div class="loom-prompt-legend" aria-label="Prompt markers"><span><svg viewBox="0 0 32 16" aria-hidden="true"><path d="M0 8H32" stroke-dasharray="3 3" /><circle cx="16" cy="8" r="5" /></svg>Baseline</span><span><svg viewBox="0 0 32 16" aria-hidden="true"><path d="M0 8H32" /><circle cx="16" cy="8" r="5" class="is-filled" /></svg>Assumption log</span></div>
     <p class="loom-caption" data-count aria-live="polite">{plot.points.length} prompt averages · {plot.groups.reduce((n, group) => n + group.runs, 0)} reviewed runs with elapsed times</p>
     <div class="loom-plot-wrap">
-    <svg class="loom-plot" viewBox="0 0 640 420" role="group" aria-label="Mean runtime recognition against mean estimated API cost, elapsed time or output tokens. Each focusable point represents one model, effort setting, and prompt. Lines connect baseline and assumptions averages.">
+    <svg class="loom-plot" viewBox="0 0 640 420" role="group" aria-label="Mean runtime recognition against mean estimated API cost, elapsed time or output tokens. Each focusable point represents one model, effort setting, and prompt. Lines connect Baseline and Assumption log averages.">
       <path class="loom-axes" d={`M${plotFrame.left} ${plotFrame.top}V${plotFrame.bottom}H${plotFrame.right}`} />
       <text class="loom-axis-title" transform="translate(22 190) rotate(-90)" text-anchor="middle">Mean runtime recognition (%)</text>
       {[0, 0.75, 1.5, 2.25, 3].map(value => {
@@ -58,7 +58,7 @@ const options = (key: "model" | "effective_effort") => [...new Set(snapshot.rows
       {configurations.map(config => {
         const point = points.get(config.id);
         const group = plot.groups.find(group => group.run_id === config.id);
-        const description = group ? describeAverage(group, "duration_seconds") : `${modelName(config.model)} · ${config.effort} · ${config.prompt}: no elapsed time available`;
+        const description = group ? describeAverage(group, "duration_seconds") : `${modelName(config.model)} · ${config.effort} · ${promptName(config.prompt)}: no elapsed time available`;
         return <>
           <path class="loom-point" d={modelMarker(config.model)} data-run={config.id} data-model={config.model} data-prompt={config.prompt} data-average transform={`translate(${point?.x ?? plotFrame.left} ${point?.y ?? plotFrame.bottom})`} display={point ? undefined : "none"} tabindex={point ? "0" : "-1"} role="button" aria-label={description}><title>{description}</title></path>
         </>;
@@ -66,7 +66,7 @@ const options = (key: "model" | "effective_effort") => [...new Set(snapshot.rows
     </svg>
     <div class="loom-plot-tooltip" id="loom-average-tooltip" role="tooltip" data-plot-tooltip hidden><strong data-tooltip-model></strong><span data-tooltip-condition></span></div>
     </div>
-    <p class="loom-caption">Hollow markers show baseline; filled markers show assumptions. Lines follow effort levels within each model: dashed for baseline, solid for assumptions. Hover or focus a marker to see its effort and the link to the other prompt. These are group averages, not matched runs. Both axes use the same reviewed runs with available data, weighted equally. Gemini has no cost estimate yet.</p>
+    <p class="loom-caption">Hollow markers show <strong>Baseline</strong>; filled markers show <strong>Assumption log</strong>. Lines follow effort levels within each model: dashed for <strong>Baseline</strong>, solid for <strong>Assumption log</strong>. Hover or focus a marker to see its effort and the link to the other prompt. These are group averages, not matched runs. Both axes use the same reviewed runs with available data, weighted equally. Gemini has no cost estimate yet.</p>
     <p data-selection class="loom-selection" aria-live="polite">Select a symbol for its averages and run count.</p>
     <p class="loom-caption">Recognition is the percentage of fully correct judgments across the three runtime hazards. Rounding is shown separately in the matrix. Fake-capability recognition is recorded in the reviews but isn't a separate plotted score.</p>
     <noscript><p class="loom-caption">JavaScript enables filtering. The chart includes all recorded run dates. Expand the matrix below for individual runs.</p></noscript>
@@ -74,7 +74,7 @@ const options = (key: "model" | "effective_effort") => [...new Set(snapshot.rows
   <script is:inline type="application/json" data-results set:html={JSON.stringify(initial).replace(/</g, "\\u003c")} />
 </loom-results>
 <script>
-  import { filterRuns, plotFrame, modelName } from "./results.mjs";
+  import { filterRuns, plotFrame, modelName, promptName } from "./results.mjs";
   import { plotModelAverages, describeAverage } from "./averages.mjs";
   class LoomResults extends HTMLElement {
     connectedCallback() {
@@ -168,7 +168,7 @@ const options = (key: "model" | "effective_effort") => [...new Set(snapshot.rows
           });
           this.querySelectorAll<SVGLineElement>("[data-pair]").forEach(line => line.classList.toggle("is-active", line.dataset.pair === group.pairId));
           tooltip.querySelector("[data-tooltip-model]")!.textContent = modelName(group.model);
-          tooltip.querySelector("[data-tooltip-condition]")!.textContent = `${group.effort} effort · ${group.prompt === "baseline" ? "Baseline" : "Assumptions"}`;
+          tooltip.querySelector("[data-tooltip-condition]")!.textContent = `${group.effort} effort · ${promptName(group.prompt)}`;
           tooltip.hidden = false;
           const wrap = plotWrap.getBoundingClientRect();
           const mark = circle.getBoundingClientRect();

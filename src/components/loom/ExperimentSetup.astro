@@ -17,7 +17,7 @@ const [brief, runbook] = await Promise.all([renderBrief(), renderRunbook()]);
 ---
 <figure class="loom-figure loom-experiment-setup not-prose">
   <section>
-    <h3>Baseline instruction</h3>
+    <h3>Baseline</h3>
     <Code code={setup.baseline.trimEnd()} lang="markdown" themes={themes} defaultColor={false} />
     <loom-handouts class="loom-handouts">
       <div class="loom-handout-cards" role="group" aria-label="Experiment handouts" data-handout-controls hidden>
@@ -35,7 +35,7 @@ const [brief, runbook] = await Promise.all([renderBrief(), renderRunbook()]);
     </loom-handouts>
   </section>
   <section>
-    <h3>Asking the agent to document its assumptions</h3>
+    <h3>Assumption log</h3>
     <Code code={setup.assumptions.trimEnd()} lang="markdown" themes={themes} defaultColor={false} />
   </section>
 </figure>

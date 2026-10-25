@@ -1,3 +1,5 @@
+export const promptName = prompt => ({ baseline: "Baseline", assumptions: "Assumption log" })[prompt] ?? prompt;
+
 export const languageHazards = ["signer", "dispatch", "deferred_values"];
 export const matrixHazards = [...languageHazards, "rounding"];
 export const roundingFixJudgments = {

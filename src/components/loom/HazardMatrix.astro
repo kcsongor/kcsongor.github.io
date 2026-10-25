@@ -3,7 +3,7 @@ import { averageMetrics } from "./averages.mjs";
 import { apiCost } from "./api-cost.mjs";
 import ApiCostNote from "./ApiCostNote.astro";
 import snapshot from "../../data/loom/results.json";
-import { buildHazardMatrix, recognitionSummary, modelName, metricLabel, roundingFixJudgments } from "./results.mjs";
+import { buildHazardMatrix, recognitionSummary, modelName, promptName, metricLabel, roundingFixJudgments } from "./results.mjs";
 import "./loom.css";
 const groups = buildHazardMatrix(snapshot.rows);
 const efforts = ["all", "medium", "high", "xhigh", "max"];
@@ -19,7 +19,7 @@ const judgments = {
 <loom-hazard-matrix class="block">
   <figure class="loom-figure loom-matrix not-prose">
     <figcaption><span class="loom-kicker">Results</span>Recognition by model</figcaption>
-    <p class="loom-caption loom-comparison-intro">Compare <strong>baseline</strong> and <strong>assumptions</strong>. Expand a row for individual runs and rounding results.</p>
+    <p class="loom-caption loom-comparison-intro">Compare <strong>Baseline</strong> and <strong>Assumption log</strong>. Expand a row for individual runs and rounding results.</p>
     <div class="loom-comparison-tools">
       <div class="loom-effort-filter" role="group" aria-label="Filter results by effort" hidden>
         <span>Effort</span>
@@ -31,7 +31,7 @@ const judgments = {
       <table class="loom-comparison-table">
         <caption class="sr-only">Runtime hazard recognition by model, effort and prompt. Percentages count full recognition only.</caption>
         <colgroup><col class="loom-model-col" /><col /><col /></colgroup>
-        <thead><tr><th scope="col">Model / effort</th><th scope="col">Baseline</th><th scope="col">Assumptions</th></tr></thead>
+        <thead><tr><th scope="col">Model / effort</th><th scope="col">Baseline</th><th scope="col">Assumption log</th></tr></thead>
         {groups.map((group, groupIndex) => <tbody data-config data-model={group.model} data-effort={group.effort} data-reviewed={group.prompts.reduce((n,p) => n + p.reviewed,0)} data-attempts={group.prompts.reduce((n,p) => n + p.runs.length,0)} class:list={{"loom-model-start": groupIndex === 0 || groups[groupIndex - 1].model !== group.model}}>
           <tr class="loom-comparison-row">
             <th scope="row">
@@ -45,9 +45,9 @@ const judgments = {
             {group.prompts.map(prompt => {
               const score = recognitionSummary(prompt.runs);
               const averages = averageMetrics(snapshot.rows.filter(row => row.model === group.model && row.effective_effort === group.effort && row.prompt_condition === prompt.prompt));
-              const description = `${modelName(group.model)}, ${group.effort}, ${prompt.prompt}: ${score.percent === null ? "no score" : `${Math.round(score.percent)}%`}; ${score.correct} of ${score.total} runtime hazard judgments fully correct; ${score.partial} partial, across ${score.runs} reviewed runs. Rounding is excluded. Average time: ${metricLabel(averages.time, "duration_seconds")} from ${averages.timeCount} runs.${averages.cost === null ? "" : ` Average estimated API cost: ${metricLabel(averages.cost, "api_cost_usd")} from ${averages.costCount} runs.`}`;
+              const description = `${modelName(group.model)}, ${group.effort}, ${promptName(prompt.prompt)}: ${score.percent === null ? "no score" : `${Math.round(score.percent)}%`}; ${score.correct} of ${score.total} runtime hazard judgments fully correct; ${score.partial} partial, across ${score.runs} reviewed runs. Rounding is excluded. Average time: ${metricLabel(averages.time, "duration_seconds")} from ${averages.timeCount} runs.${averages.cost === null ? "" : ` Average estimated API cost: ${metricLabel(averages.cost, "api_cost_usd")} from ${averages.costCount} runs.`}`;
               return <td class="loom-score-cell">
-                <div class="loom-score" role="img" aria-label={score.percent === null ? `${prompt.prompt}: no complete reviews` : description} title={description}>
+                <div class="loom-score" role="img" aria-label={score.percent === null ? `${promptName(prompt.prompt)}: no complete reviews` : description} title={description}>
                   <div class="loom-score-label"><strong>{score.percent === null ? "—" : `${Math.round(score.percent)}%`}</strong><span class="loom-score-averages"><span>{averages.time === null ? "" : metricLabel(averages.time, "duration_seconds")}</span>{averages.cost !== null && <span>{metricLabel(averages.cost, "api_cost_usd")}</span>}</span></div>
                   <div class:list={{"loom-score-track": true, "is-missing": score.percent === null}} aria-hidden="true">
                     <span class="loom-score-full" style={`width: ${score.percent ?? 0}%`}></span><span class="loom-score-partial" style={`width: ${score.partialPercent}%`}></span>
@@ -63,10 +63,10 @@ const judgments = {
               <div class="loom-matrix-legend" aria-label="Recognition labels">
                 {Object.entries(judgments).map(([key, judgment]) => <span><span class="loom-cell" data-judgment={key} aria-hidden="true">{judgment.symbol}</span>{judgment.label}</span>)}
               </div>
-        <div class="loom-matrix-scroll" tabindex="0" role="region" aria-label={`${modelName(group.model)}, ${group.effort}: baseline and assumptions comparison`}>
+        <div class="loom-matrix-scroll" tabindex="0" role="region" aria-label={`${modelName(group.model)}, ${group.effort}: Baseline and Assumption log comparison`}>
           <div class="loom-matrix-prompts">
             {group.prompts.map(prompt => <table class="loom-matrix-table">
-              <caption><strong>{prompt.prompt === "baseline" ? "Baseline" : "Assumptions"}</strong><span>{prompt.reviewed} / {prompt.runs.length} scored</span></caption>
+              <caption><strong>{promptName(prompt.prompt)}</strong><span>{prompt.reviewed} / {prompt.runs.length} scored</span></caption>
               <thead><tr><th scope="col">Attempt</th>{hazards.map(hazard => <th scope="col">{hazard}</th>)}<th scope="col">Fix</th></tr></thead>
               <tbody>
                 {prompt.runs.length === 0 && <tr><td colspan={hazards.length + 2} class="loom-matrix-empty">No attempts recorded</td></tr>}
@@ -81,12 +81,12 @@ const judgments = {
                   </th>
                   {run.cells.map((cell, hazardIndex) => {
                     const judgment = judgments[cell];
-                    const description = `${modelName(group.model)} · ${group.effort}${run.effortSource === "explicit" ? "" : " (CLI default)"} · ${prompt.prompt} · ${run.label}: ${hazards[hazardIndex]} — ${judgment.label}. Run status: ${run.status.replaceAll("_", " ")}.`;
+                    const description = `${modelName(group.model)} · ${group.effort}${run.effortSource === "explicit" ? "" : " (CLI default)"} · ${promptName(prompt.prompt)} · ${run.label}: ${hazards[hazardIndex]} — ${judgment.label}. Run status: ${run.status.replaceAll("_", " ")}.`;
                     return <td><button type="button" class="loom-cell" data-judgment={cell} data-cell-description={description} aria-label={description} title={description}><span aria-hidden="true">{judgment.symbol}</span></button></td>;
                   })}
                   <td>{(() => {
                     const judgment = roundingFixJudgments[run.roundingFix as keyof typeof roundingFixJudgments];
-                    const description = `${modelName(group.model)} · ${group.effort} · ${prompt.prompt} · ${run.label}: Rounding fix — ${judgment.label}. ${run.roundingFixNote}`;
+                    const description = `${modelName(group.model)} · ${group.effort} · ${promptName(prompt.prompt)} · ${run.label}: Rounding fix — ${judgment.label}. ${run.roundingFixNote}`;
                     return <button type="button" class="loom-cell loom-fix-cell" data-fix={run.roundingFix} data-cell-description={description} aria-label={description} title={description}><span aria-hidden="true">{judgment.symbol}</span></button>;
                   })()}</td>
                 </tr>)}
