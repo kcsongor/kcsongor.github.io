@@ -61,18 +61,18 @@ Next we'll look at Loom, and in particular how it *differs* from Move. These are
 
 ### Signers
 
-Move disallows storing a `signer`, while Loom (which spells it `Signer`) allows a resource to keep a `Signer` after the transaction ends.
+Move disallows storing a `signer`, while Loom allows a resource to keep a `signer` after the transaction ends.
 
 ```loom
 // Move: rejected, because signer cannot be stored
 struct Stash has key { s: signer }
 
 // Loom: the signer can survive the transaction
-resource Stash { s: Signer }
+resource Stash { s: signer }
 move_to(to, Stash { s: s });
 ```
 
-If a user passes their `Signer` to a malicious contract, that contract can store it and later call the token contract's `transfer` function to spend the user's balance, without a new signature. The danger is that passing a signer to untrusted code gives it authority that can outlive the transaction.
+If a user passes their `signer` to a malicious contract, that contract can store it and later call the token contract's `transfer` function to spend the user's balance, without a new signature. The danger is that passing a signer to untrusted code gives it authority that can outlive the transaction.
 
 Note that the original Move signer is also quite dangerous, because even though
 a contract can't store it, it can still use it to call functions such as `transfer` during the transaction. Sui Move uses owned objects and the [capability pattern](https://github.com/sui-foundation/sui-move-intro-course/blob/main/unit-two/lessons/6_capability_design_pattern.md) to give contracts more limited authority.
@@ -84,7 +84,7 @@ public fun admin_only(admin_cap: &AdminCap) {
 }
 ```
 
-The agent should recognise this problem and avoid passing a `Signer` where a more limited capability would suffice.
+The agent should recognise this problem and avoid passing a `signer` where a more limited capability would suffice.
 
 ### Choosing which code gets called
 
@@ -122,7 +122,7 @@ We give the agent a short language spec, along with examples and an executable i
 
 <LanguageSpec />
 
-There are a couple of things worth noticing. The spec says that a resource can contain any value type except references. That allows it to store a `Signer`. An agent could work out the signer retention problem from that rule, without running an experiment.
+There are a couple of things worth noticing. The spec says that a resource can contain any value type except references. That allows it to store a `signer`. An agent could work out the signer retention problem from that rule, without running an experiment.
 
 The dispatch story is less complete. It says that a transaction can supply an implementation when the type's module doesn't provide one, but doesn't say what happens when it does. The agent should recognise this and run experiments.
 
