@@ -97,7 +97,7 @@ let paid = call B::split(&mut reserve, amount);
 Here `B` is a type parameter of the calling function, and `split` can be called on any type `B` as long as there is an implementation for the `Standard::Asset` interface (which declares `split`). The documentation given to the agents says that when a type's module doesn't provide an implementation, a transaction can supply another module's address using a resolution hint. What it doesn't mention is that this hint can also override an existing implementation. Even if `Silver` already implements the interface, the transaction can redirect the call to an attacker-controlled implementation:
 
 ```loom
-// Replace Silver's existing implementation with the one at @drain
+// the hint: redirect Silver's existing implementation to @drain
 using [Standard::Asset for Silver::Silver => @drain]
 ```
 
