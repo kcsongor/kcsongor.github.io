@@ -30,6 +30,9 @@ export default defineConfig({
   output: "static",
   devToolbar: { enabled: false },
   trailingSlash: "always",
+  redirects: {
+    "/familiarity-trap": "/loom/",
+  },
   integrations: [
     mdx(),
     sitemap({
