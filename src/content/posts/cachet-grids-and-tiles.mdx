@@ -71,7 +71,7 @@ for (int i = 0; i < M; i++)
       c[i][j] += a[i][k] * b[k][j];
 ```
 
-Cachet's straightforward version of this loop nest reaches just <CachetMetric run="cpu" kernel="matmul" digits={2} /> GFLOP/s[^gflops] on one core for 1024 × 1024 matrices: about <CachetMetric run="cpu" kernel="matmul" kind="percent" other="openblas_neon_1" />% of OpenBLAS's speed on the same core. There's a lot of room to improve:
+This loop nest reaches just <CachetMetric run="cpu" kernel="matmul" digits={2} /> GFLOP/s[^gflops] on one core for 1024 × 1024 matrices: about <CachetMetric run="cpu" kernel="matmul" kind="percent" other="openblas_neon_1" />% of OpenBLAS's speed on the same core. There's a lot of room to improve:
 
 [^gflops]: Billions of floating-point operations per second, counting a multiply-add as two operations.
 
