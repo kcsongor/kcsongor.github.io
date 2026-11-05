@@ -15,8 +15,11 @@ import {
 } from "@shikijs/transformers";
 import { transformerFileName } from "./src/utils/transformers/fileName";
 import { transformerLanguageLabel } from "./src/utils/transformers/languageLabel.mjs";
+import { transformerHeat } from "./src/utils/transformers/heat.mjs";
+import { transformerCachetTypography } from "./src/utils/transformers/cachetTypography.mjs";
+import { transformerTokenClasses } from "./src/utils/transformers/tokenClasses.mjs";
 import config from "./astro-paper.config";
-import cachet from "./src/syntax/cachet.tmLanguage.json";
+import cachet from "./src/syntax/cachet.mjs";
 import loom from "./src/syntax/loom.tmLanguage.json";
 import { monochromeLight, monochromeDark } from "./src/syntax/monochrome";
 import { legacyHeadingAliases } from "./src/syntax/legacy-headings.mjs";
@@ -66,9 +69,12 @@ export default defineConfig({
       transformers: [
         transformerFileName({ style: "v2", hideDot: false }),
         transformerLanguageLabel(),
+        transformerHeat(),
+        transformerCachetTypography(),
         transformerNotationHighlight(),
         transformerNotationWordHighlight(),
         transformerNotationDiff({ matchAlgorithm: "v3" }),
+        transformerTokenClasses(),
       ],
     },
   },

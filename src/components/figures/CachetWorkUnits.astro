@@ -1,0 +1,168 @@
+---
+const cells = Array.from({ length: 1024 }, (_, index) => ({
+  row: Math.floor(index / 32),
+  col: index % 32,
+}));
+---
+
+<cachet-work-units
+  class="gpu-figure matrix-figure not-prose"
+  data-mode="scalar"
+>
+  <figure>
+    <figcaption class="sr-only">A 32 × 32 output, divided among threads or threadgroups</figcaption>
+    <div class="matrix-chapters" role="group" aria-label="Work granularity">
+      <button
+        type="button"
+        data-mode-button="scalar"
+        aria-pressed="true"
+        disabled
+        ><span>One element</span
+        ></button
+      >
+      <button
+        type="button"
+        data-mode-button="tile"
+        aria-pressed="false"
+        disabled
+        ><span>A whole tile</span
+        ></button
+      >
+    </div>
+    <div class="work-layout">
+      <div
+        class="work-matrix"
+        role="img"
+        aria-label="32 by 32 output. The highlighted cell is C[9, 10]."
+      >
+        {
+          cells.map(({ row, col }) => (
+            <span
+              class:list={{
+                selected: row === 9 && col === 10,
+                "in-tile": row < 16 && col < 16,
+                "part-top": row < 16 && col < 16 && row % 8 === 0,
+                "part-bottom": row < 16 && col < 16 && row % 8 === 7,
+                "part-left": row < 16 && col < 16 && col % 8 === 0,
+                "part-right": row < 16 && col < 16 && col % 8 === 7,
+              }}
+            />
+          ))
+        }
+        <div class="work-focus" aria-hidden="true"></div>
+      </div>
+    </div>
+    <div
+      class="work-detail"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span data-count>1,024 threads; one output each.</span>
+      <span data-mapping>The outline marks C[9, 10].</span>
+    </div>
+  </figure>
+</cachet-work-units>
+
+<script>
+  class CachetWorkUnits extends HTMLElement {
+    connectedCallback() {
+      const buttons =
+        this.querySelectorAll<HTMLButtonElement>("[data-mode-button]");
+      buttons.forEach(button => {
+        button.disabled = false;
+        button.onclick = () => {
+          const tile = button.dataset.modeButton === "tile";
+          this.dataset.mode = tile ? "tile" : "scalar";
+          buttons.forEach(b =>
+            b.setAttribute("aria-pressed", String(b === button))
+          );
+          this.querySelector("[data-count]")!.textContent = tile
+            ? "4 threadgroups; one 16 × 16 tile each."
+            : "1,024 threads; one output each.";
+          this.querySelector("[data-mapping]")!.textContent = tile
+            ? "Each outlined 8 × 8 part belongs to one SIMD group."
+            : "The outline marks C[9, 10].";
+          this.querySelector("[role=img]")!.setAttribute(
+            "aria-label",
+            tile
+              ? "32 by 32 output. The top-left 16 by 16 tile is highlighted and split into four 8 by 8 parts."
+              : "32 by 32 output. The highlighted cell is C[9, 10]."
+          );
+        };
+      });
+    }
+  }
+  if (!customElements.get("cachet-work-units"))
+    customElements.define("cachet-work-units", CachetWorkUnits);
+</script>
+
+<style>
+  .work-detail {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    min-height: 3.2em;
+  }
+  .work-detail span { display: block; }
+  .work-layout {
+    width: min(100%, 28rem);
+    margin: 1rem auto;
+  }
+  .work-matrix {
+    display: grid;
+    grid-template-columns: repeat(32, 1fr);
+    position: relative;
+    gap: 1px;
+  }
+  .work-matrix span {
+    aspect-ratio: 1;
+    border-radius: 1px;
+    background: var(--matrix-idle);
+    transition: background-color 350ms;
+  }
+  [data-mode="scalar"] .selected {
+    background: var(--matrix-first);
+    outline: 2px solid var(--matrix-first);
+    z-index: 1;
+  }
+  [data-mode="tile"] .in-tile {
+    background: color-mix(in srgb, var(--matrix-first) 18%, var(--background));
+  }
+  [data-mode="tile"] .part-top {
+    border-top: 1px solid var(--matrix-first);
+  }
+  [data-mode="tile"] .part-bottom {
+    border-bottom: 1px solid var(--matrix-first);
+  }
+  [data-mode="tile"] .part-left {
+    border-left: 1px solid var(--matrix-first);
+  }
+  [data-mode="tile"] .part-right {
+    border-right: 1px solid var(--matrix-first);
+  }
+  .work-focus {
+    position: absolute;
+    pointer-events: none;
+    border: 1px solid var(--foreground);
+    left: calc((100% + 1px) * 10 / 32);
+    top: calc((100% + 1px) * 9 / 32);
+    width: calc((100% - 31px) / 32);
+    height: calc((100% - 31px) / 32);
+    transition:
+      left 450ms,
+      top 450ms,
+      width 450ms,
+      height 450ms;
+  }
+  [data-mode="tile"] .work-focus {
+    left: 0;
+    top: 0;
+    width: calc((100% - 1px) / 2);
+    height: calc((100% - 1px) / 2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .work-focus,
+    .work-matrix span {
+      transition: none;
+    }
+  }
+</style>

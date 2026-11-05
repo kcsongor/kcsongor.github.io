@@ -4,6 +4,7 @@ import { resolveDefaultOgImagePath } from "@/utils/resolveDefaultOgImagePath";
 import { getAssetPath } from "@/utils/withBase";
 import config from "@/config";
 import "@/styles/global.css";
+import { tokenStylesheet } from "@/syntax/monochrome";
 
 type Props = {
   type?: "website" | "article";
@@ -123,6 +124,7 @@ const rssHref = getRelativeLocaleUrl(
       })();
     </script>
 
+    <Fragment set:html={`<style>${tokenStylesheet}</style>`} />
   </head>
   <body
     class="bg-background font-app text-foreground selection:bg-accent/75 selection:text-accent-foreground flex min-h-svh flex-col"

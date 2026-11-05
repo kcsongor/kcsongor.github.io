@@ -1,0 +1,319 @@
+---
+import MatrixLegend from "./MatrixLegend.astro";
+import CachetBlockingCache from "./CachetBlockingCache.astro";
+---
+
+<div
+  id="blocking-reuse-three"
+  class="gpu-figure matrix-figure not-prose"
+  data-chapter="1"
+  data-view="math"
+>
+  <figure>
+    <figcaption class="sr-only">
+      Reusing inputs across a 4 × 4 output block
+    </figcaption>
+
+    <div
+      class="bt-chapters matrix-chapters"
+      role="group"
+      aria-label="Steps in the explanation"
+    >
+      <button type="button" data-seek="16.5" aria-pressed="true" disabled>
+        <span>Group into blocks</span>
+      </button>
+      <button type="button" data-seek="37" aria-pressed="false" disabled>
+        <span>Multiply the blocks</span>
+      </button>
+      <button type="button" data-cache-view aria-pressed="false" disabled>
+        <span>Keep them in cache</span>
+      </button>
+    </div>
+
+    <div data-math-view>
+      <div class="bt-story">
+        <strong data-phase>Regrouping each matrix into four blocks.</strong>
+        <p data-guidance class="sr-only">
+          Each of the four entries is now a 4 × 4 matrix.
+        </p>
+      </div>
+
+      <div class="bt-playback matrix-playback">
+        <button type="button" data-play aria-pressed="false" disabled
+          >Play</button
+        >
+        <span data-status>Loading animation…</span>
+        <details class="bt-scrub">
+          <summary>Scrub</summary>
+          <label>
+            Progress
+            <input
+              type="range"
+              min="16.5"
+              max="19.9999"
+              step="0.05"
+              value="16.5"
+              aria-label="Progress through the selected demonstration"
+              disabled
+            />
+          </label>
+        </details>
+      </div>
+
+      <div class="bt-stage">
+        <section
+          class="bt-reference"
+          aria-label="Scalar reference multiplication"
+        >
+          <p class="bt-reference-title">2 × 2 reference</p>
+          <div
+            class="bt-scene bt-small"
+            data-scene="small"
+            role="img"
+            aria-label="Two by two multiplication. A is left of C; B is above C."
+          >
+          </div>
+          <p class="bt-equation" data-equation></p>
+        </section>
+        <div
+          class="bt-scene bt-large"
+          data-scene="large"
+          role="img"
+          aria-label="Eight by eight multiplication. A is left of C; B is above C. Input blocks remain outlined while their values contribute to several outputs."
+        >
+        </div>
+      </div>
+
+      <div class="bt-reading">
+        <p class="bt-detail" data-detail>Each block contains 4 × 4 entries</p>
+        <MatrixLegend />
+      </div>
+    </div>
+    <div data-cache-panel hidden>
+      <CachetBlockingCache />
+    </div>
+
+    <div class="sr-only" aria-live="polite" data-announcement></div>
+    <span class="bt-colour-probe" aria-hidden="true"></span>
+    <noscript
+      ><p>
+        Each retained A value serves four output columns, and each retained B
+        value serves four output rows. Enable JavaScript to follow the products.
+      </p></noscript
+    >
+  </figure>
+</div>
+
+<style is:global>
+  #blocking-reuse-three {
+    --bt-first: var(--matrix-first);
+    --bt-second: var(--matrix-second);
+    --bt-sum: var(--matrix-sum);
+    --bt-muted: color-mix(in srgb, var(--foreground) 65%, var(--background));
+    color: var(--foreground);
+    padding-block: 0;
+  }
+  #blocking-reuse-three [hidden] {
+    display: none !important;
+  }
+  #blocking-reuse-three figcaption {
+    font-size: clamp(1.2rem, 3vw, 1.55rem);
+    letter-spacing: -0.025em;
+    line-height: 1.25;
+  }
+  #blocking-reuse-three .figure-intro {
+    color: var(--bt-muted);
+    margin: 0.5rem 0 1.25rem;
+  }
+  #blocking-reuse-three .bt-chapters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0;
+  }
+  #blocking-reuse-three .bt-chapters button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: 0.65rem 0.35rem 0.75rem;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    text-align: left;
+    line-height: 1.35;
+    font-size: 0.8rem;
+    color: var(--bt-muted);
+    background: transparent;
+  }
+  #blocking-reuse-three .bt-chapters button[aria-pressed="true"] {
+    color: var(--foreground);
+    border-bottom-color: var(--bt-first);
+    box-shadow: none;
+  }
+  #blocking-reuse-three .bt-step-number {
+    font-size: 0.65rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+  }
+  #blocking-reuse-three .bt-story {
+    padding-top: 1.15rem;
+    min-height: 3.5rem;
+  }
+  #blocking-reuse-three .bt-story strong {
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+  #blocking-reuse-three .bt-story p {
+    color: var(--bt-muted);
+    font-size: 0.85rem;
+    margin: 0.3rem 0 0;
+  }
+  #blocking-reuse-three .bt-stage {
+    position: relative;
+    max-width: 42rem;
+    margin-inline: auto;
+    isolation: isolate;
+  }
+  #blocking-reuse-three .bt-scene {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+  /* The scalar reference occupies the unused quadrant above A.
+     Both scenes keep A left of C, and B above C. */
+  #blocking-reuse-three .bt-reference {
+    position: absolute;
+    z-index: 1;
+    left: 1%;
+    top: 2%;
+    width: 41%;
+    pointer-events: none;
+  }
+  #blocking-reuse-three .bt-reference-title {
+    margin: 0;
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--bt-muted);
+  }
+  #blocking-reuse-three .bt-small {
+    width: 100%;
+    max-width: 15rem;
+    margin-inline: auto;
+  }
+  #blocking-reuse-three .bt-equation {
+    font-size: 0.65rem;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    margin: -0.3rem 0 0;
+    line-height: 1.4;
+    min-height: 1.4em;
+  }
+  #blocking-reuse-three canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  #blocking-reuse-three .bt-label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  #blocking-reuse-three .bt-small .bt-label {
+    font-size: 0.7rem;
+  }
+  #blocking-reuse-three .bt-block-label {
+    font-size: clamp(0.65rem, 2vw, 0.85rem);
+    text-shadow: 0 1px 2px var(--background);
+  }
+  #blocking-reuse-three .bt-held-label {
+    color: var(--foreground);
+    background: var(--background);
+    border: 1px solid
+      color-mix(in srgb, var(--foreground) 35%, var(--background));
+    border-radius: 3px;
+    padding: 0.08rem 0.3rem;
+    font-size: clamp(0.55rem, 1.8vw, 0.75rem);
+    line-height: 1.35;
+  }
+  #blocking-reuse-three .bt-reading {
+    text-align: center;
+    margin-top: -0.25rem;
+  }
+  #blocking-reuse-three .bt-detail {
+    margin: 0 0 0.6rem;
+    font-size: 0.85rem;
+    min-height: 1.6em;
+    font-variant-numeric: tabular-nums;
+  }
+  #blocking-reuse-three .bt-playback {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin: 0.6rem 0 0.25rem;
+    flex-wrap: wrap;
+  }
+  #blocking-reuse-three .bt-playback > button {
+    min-width: 5rem;
+    border-radius: 4px;
+  }
+  #blocking-reuse-three [data-status] {
+    flex: 1;
+    font-size: 0.75rem;
+    color: var(--bt-muted);
+    min-width: 8rem;
+  }
+  #blocking-reuse-three .bt-scrub {
+    font-size: 0.75rem;
+  }
+  #blocking-reuse-three .bt-scrub[open] {
+    flex: 1 0 100%;
+  }
+  #blocking-reuse-three .bt-scrub summary {
+    cursor: pointer;
+  }
+  #blocking-reuse-three .bt-scrub label {
+    margin-top: 0.5rem;
+  }
+  #blocking-reuse-three .figure-note {
+    color: var(--bt-muted);
+    font-size: 0.75rem;
+    line-height: 1.65;
+  }
+  #blocking-reuse-three .bt-colour-probe {
+    position: absolute;
+    visibility: hidden;
+    width: 0;
+    height: 0;
+  }
+  @media (max-width: 480px) {
+    #blocking-reuse-three .bt-chapters button {
+      font-size: 0.7rem;
+    }
+    #blocking-reuse-three .bt-story {
+      min-height: 4.5rem;
+    }
+    #blocking-reuse-three .bt-reference {
+      width: 39%;
+      left: 1%;
+      top: 0;
+    }
+    #blocking-reuse-three .bt-reference-title {
+      font-size: 0.6rem;
+    }
+    #blocking-reuse-three .bt-equation {
+      font-size: 0.55rem;
+    }
+    #blocking-reuse-three .bt-small .bt-label {
+      font-size: 0.55rem;
+    }
+  }
+</style>
+
+<script>
+  import "./cachet-blocking.js";
+</script>

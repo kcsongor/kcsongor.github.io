@@ -1,0 +1,33 @@
+---
+interface Props {
+  split?: boolean;
+}
+const { split = false } = Astro.props;
+const entries = split
+  ? [
+      ["first", "Thread 1"],
+      ["second", "Thread 2"],
+      ["third", "Thread 3"],
+      ["sum", "Combined sum"],
+    ]
+  : [
+      ["first", "First contribution"],
+      ["second", "Second contribution"],
+      ["sum", "Running sum"],
+    ];
+---
+
+<div
+  class="matrix-legend"
+  data-legend-kind={split ? "split" : "pair"}
+  aria-label="Contributions to each output"
+>
+  {
+    entries.map(([colour, label]) => (
+      <span>
+        <i class={`matrix-key matrix-key-${colour}`} aria-hidden="true" />
+        {label}
+      </span>
+    ))
+  }
+</div>

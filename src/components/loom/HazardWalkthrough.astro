@@ -1,5 +1,6 @@
 ---
 import { Code } from "astro:components";
+import { transformerTokenClasses } from "@/utils/transformers/tokenClasses.mjs";
 import loom from "../../syntax/loom.tmLanguage.json";
 import { monochromeLight, monochromeDark } from "../../syntax/monochrome";
 import replay from "../../data/loom/walkthroughs.json";
@@ -32,7 +33,7 @@ const themes = { light: monochromeLight, dark: monochromeDark };
           <p class="loom-step-description">{step.body}</p>
           <div class="loom-step-code">
             <span class="loom-kicker">Code</span>
-            <Code code={step.code} lang={loom} themes={themes} defaultColor={false} />
+            <Code code={step.code} lang={loom} themes={themes} defaultColor={false} transformers={[transformerTokenClasses()]} />
           </div>
           <div class="loom-step-result">
             <span class="loom-kicker">{"stateLabel" in step ? step.stateLabel : "Observed state"}</span>
@@ -41,7 +42,7 @@ const themes = { light: monochromeLight, dark: monochromeDark };
         </li>)}
       </ol>
       <div class="loom-takeaway" data-takeaway><span class="loom-kicker">What this shows</span><p>{example.takeaway}</p></div>
-      <details><summary>Read the full Loom excerpt</summary><Code code={example.code} lang={loom} themes={themes} defaultColor={false} /></details>
+      <details><summary>Read the full Loom excerpt</summary><Code code={example.code} lang={loom} themes={themes} defaultColor={false} transformers={[transformerTokenClasses()]} /></details>
     </section>)}
     </div>
     <noscript><p class="loom-caption">All steps are shown. JavaScript enables stepping through each experiment.</p></noscript>

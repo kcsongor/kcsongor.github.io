@@ -24,7 +24,7 @@ type Props = {
   nextPost: CollectionEntry<"posts"> | null;
 };
 const { post, prevPost, nextPost } = Astro.props;
-const { title, description, pubDatetime, modDatetime, canonicalURL, tags, draft } = post.data;
+const { title, subtitle, description, pubDatetime, modDatetime, canonicalURL, tags, draft } = post.data;
 const { Content, headings } = await render(post);
 const toc = headings.filter(heading =>
   (heading.depth === 2 || heading.depth === 3) && heading.slug !== "footnote-label"
@@ -42,6 +42,7 @@ const ogImage = typeof post.data.ogImage === "string" ? post.data.ogImage : post
     <header class="post-header">
       {draft && <p class="text-accent mb-3 text-sm">Draft · visible only in development</p>}
       <h1 data-pagefind-meta="title" class="text-foreground text-3xl font-bold leading-tight tracking-tight sm:text-4xl">{title}</h1>
+      {subtitle && <p class="post-subtitle">{subtitle}</p>}
       <p class="post-meta text-muted-foreground mt-4 text-sm leading-6">
         <time datetime={pubDatetime.toISOString()}>{formatDate(pubDatetime)}</time>
         {modDatetime && modDatetime > pubDatetime && <span class="post-updated">Updated <time datetime={modDatetime.toISOString()}>{formatDate(modDatetime)}</time></span>}

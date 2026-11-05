@@ -1,4 +1,6 @@
 import { bundledLanguages, createHighlighter } from "shiki";
+import { transformerCachetTypography } from "../utils/transformers/cachetTypography.mjs";
+import { transformerTokenClasses } from "../utils/transformers/tokenClasses.mjs";
 
 const plainLanguages = new Set(["text", "txt", "plain", "plaintext"]);
 const supported = lang => ["cachet", "loom"].includes(lang) || Object.hasOwn(bundledLanguages, lang) || plainLanguages.has(lang);
@@ -58,7 +60,10 @@ export function rehypeInlineCode({ langs = [], themes }) {
     for (const node of nodes) {
       const lang = node.properties["dataInlineLanguage"];
       const source = node.children.map(child => child.value ?? "").join("");
-      const highlighted = highlighter.codeToHast(source, { lang, themes, defaultColor: false });
+      const highlighted = highlighter.codeToHast(source, {
+        lang, themes, defaultColor: false,
+        transformers: [transformerCachetTypography(), transformerTokenClasses()],
+      });
       const pre = highlighted.children.find(child => child.type === "element" && child.tagName === "pre");
       const code = pre.children.find(child => child.type === "element" && child.tagName === "code");
       node.children = code.children.flatMap(line => line.type === "element" ? line.children : [line]);

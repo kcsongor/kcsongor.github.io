@@ -36,7 +36,7 @@
       ]
     },
     {
-      "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z_0-9]*)",
+      "match": "\\b(fn|contraction)\\s+([A-Za-z_][A-Za-z_0-9]*)",
       "captures": {
         "1": {
           "name": "storage.type.function.cachet"
@@ -47,8 +47,13 @@
       }
     },
     {
+      "comment": "A name with primes, such as acc'0 or swapped'3, is one identifier, so its digits aren't a number.",
+      "name": "meta.identifier.cachet",
+      "match": "\\b[A-Za-z_][A-Za-z_0-9]*(?:'[A-Za-z_0-9]+)+"
+    },
+    {
       "name": "keyword.control.cachet",
-      "match": "\\b(?:admitted|allocate|apart|as|at|await|big_sep|borrows|break|by|by_compiler|by_target|capability|carries|case|const|consume|consumes|continue|deriving|else|ensures|enum|exists|export|fits|fn|for|forall|from|if|impl|import|in|into|invariant|is|layout|let|like|linear|load|match|maximize|minimize|module|movement|opaque|open|peak|performance|predicate|private|produce|produces|proof|pull|reads|require|resource|return|rowrec|seal|sealed|spawn|state|static_assert|struct|synth|tasks|through|traffic|trait|transition|trust_me|type|under|use|view|where|with|witness|witnesses|working_set|writes)\\b"
+      "match": "\\b(?:admitted|allocate|apart|as|at|await|big_sep|borrows|break|by|by_compiler|by_target|capability|carries|case|const|consume|consumes|continue|deriving|else|ensures|enum|exists|export|fits|fn|for|forall|from|if|impl|import|in|into|invariant|is|layout|let|like|linear|load|match|maximize|minimize|module|movement|opaque|open|out|peak|performance|predicate|private|produce|produces|proof|pull|reads|require|resource|return|rowrec|seal|sealed|spawn|state|static_assert|struct|synth|tasks|through|traffic|trait|transition|trust_me|type|under|use|view|where|with|witness|witnesses|working_set|writes)\\b"
     },
     {
       "name": "constant.language.cachet",

@@ -1,0 +1,176 @@
+{
+  "swap": [
+    {
+      "title": "The contraction",
+      "code": "for i in 0 .. M do\n  for j in 0 .. N do\n    var acc'0: f32 = -0.0\n    for k in 0 .. K do\n      acc'0 = fma (load a[i, k]) (load b[k, j]) acc'0\n    store c[i, j] = acc'0"
+    },
+    {
+      "title": "zero (i, j) c",
+      "code": "for zi in 0 .. M do for zj in 0 .. N do\n  store c[zi, zj] = -0.0\nfor i in 0 .. M do\n  for j in 0 .. N do\n    for k in 0 .. K do\n      let acc'0 = load c[i, j]\n      store c[i, j] = fma ... acc'0"
+    },
+    {
+      "title": "hoist (j, k) c",
+      "code": "for zi in 0 .. M do for zj in 0 .. N do\n  store c[zi, zj] = -0.0\nfor i in 0 .. M do\n  for k in 0 .. K do\n    for j in 0 .. N do\n      let acc'0 = load c[i, j]\n      store c[i, j] = fma ... acc'0"
+    }
+  ],
+  "rows": [
+    {
+      "title": "The contraction",
+      "code": "for i in 0 .. M do\n  for j in 0 .. N do\n    var acc'0: f32 = -0.0\n    for k in 0 .. K do\n      acc'0 = fma ... acc'0\n    store c[i, j] = acc'0"
+    },
+    {
+      "title": "grid over (i, j)",
+      "code": "grid on M4Gpu i in 0 .. M, j in 0 .. N\n    writes c[i, j] as ct do\n  ... // the same running total and k loop\n  store ct = acc'0"
+    }
+  ],
+  "tiled": [
+    {
+      "title": "The contraction",
+      "code": "for i in 0 .. M do\n  for j in 0 .. N do\n    var acc'0: f32 = -0.0\n    for k in 0 .. K do\n      acc'0 = fma ... acc'0\n    store c[i, j] = acc'0"
+    },
+    {
+      "title": "grid over (i, j)",
+      "code": "grid on M4Gpu i in 0 .. M, j in 0 .. N writes c[i, j] as ct do\n  var acc'0: f32 = -0.0\n  for k in 0 .. K do\n    acc'0 = fma ... acc'0\n  store ct = acc'0"
+    },
+    {
+      "title": "tiles (i, j, k) (16, 16) (8, 8)",
+      "code": "grid on M4Gpu gi in 0 .. M / 16, gj in 0 .. N / 16\n    by tile (si, sj) parts [8, 8]\n    writes c[...] as ct_2 do\n  var t: [f32; 16, 16] = repeat (-0.0)\n  for k in 0 .. K / 8 do\n    let x: [f32; 16, 8] = load a[...]\n    let y: [f32; 8, 16] = load b[...]\n    t = mma x y t\n  store ct_2 = t"
+    }
+  ],
+  "tower": [
+    {
+      "title": "The contraction",
+      "code": "for i in 0 .. M do\n  for j in 0 .. N do\n    var acc'0: S.Value = S.zero ()\n    for k in 0 .. K do\n      acc'0 = S.mul_add ... acc'0\n    store c[i, j] = acc'0"
+    },
+    {
+      "title": "zero (i, j) c",
+      "code": "for zi in 0 .. M do for zj in 0 .. N do\n  store c[zi, zj] = S.zero ()\nfor i in 0 .. M do\n  for j in 0 .. N do\n    for k in 0 .. K do\n      let acc'0 = load c[i, j]\n      store c[i, j] = S.mul_add ... acc'0"
+    },
+    {
+      "title": "split k by 16 as gk ragged",
+      "code": "... // zero C\nfor i in 0 .. M do\n  for j in 0 .. N do\n    for gk in blocks (0 .. K) 16 do\n      for k in 0 .. gk.len do\n        let acc'0 = load c[i, j]\n        store c[i, j] = S.mul_add ... acc'0"
+    },
+    {
+      "title": "split i by 16 as gi, 4 as ui ragged",
+      "code": "... // zero C\nfor gi in blocks (0 .. M) 16 do\n  for ui in blocks (0 .. gi.len) 4 do\n    for i in 0 .. ui.len do\n      for j in 0 .. N do\n        for gk in blocks (0 .. K) 16 do\n          for k in 0 .. gk.len do\n            let acc'0 = load c[gi[ui[i]], j]\n            store c[gi[ui[i]], j] = S.mul_add ... acc'0"
+    },
+    {
+      "title": "split j by 8 as gj ragged",
+      "code": "... // zero C\nfor gi in blocks (0 .. M) 16 do\n  for ui in blocks (0 .. gi.len) 4 do\n    for i in 0 .. ui.len do\n      for gj in blocks (0 .. N) 8 do\n        for j in 0 .. gj.len do\n          for gk in blocks (0 .. K) 16 do\n            for k in 0 .. gk.len do\n              let acc'0 = load c[gi[ui[i]], gj[j]]\n              store c[gi[ui[i]], gj[j]] = S.mul_add ... acc'0"
+    },
+    {
+      "title": "order (gk, gj, gi, ui, i, j)",
+      "code": "... // zero C\nfor gk in blocks (0 .. K) 16 do\n  for gj in blocks (0 .. N) 8 do\n    for gi in blocks (0 .. M) 16 do\n      for ui in blocks (0 .. gi.len) 4 do\n        for i in 0 .. ui.len do\n          for j in 0 .. gj.len do\n            for k in 0 .. gk.len do\n              let acc'0 = load c[gi[ui[i]], gj[j]]\n              store c[gi[ui[i]], gj[j]] = S.mul_add ... acc'0"
+    },
+    {
+      "title": "pack a into packA along gi over (a0, a1)",
+      "code": "... // zero C\nfor gk in blocks (0 .. K) 16 do\n  for gj in blocks (0 .. N) 8 do\n    for gi in blocks (0 .. M) 16 do\n      for a0 in 0 .. gi.len do\n        for a1 in 0 .. gk.len do\n          store packA[a0, a1] = load a[gi[a0], gk[a1]]\n      ... // update C from packA and B"
+    },
+    {
+      "title": "keep packA along gi within L2 into packA_L2",
+      "code": "... // zero C\nfor gk in blocks (0 .. K) 16 do\n  for gj in blocks (0 .. N) 8 do\n    for gi in blocks (0 .. M) 16 do\n      for a0 in 0 .. gi.len do\n        for a1 in 0 .. gk.len do\n          store packA[a0, a1] = load a[gi[a0], gk[a1]]\n      lease mut packA_L2 = packA at L2\n      ... // update C from packA_L2 and B"
+    },
+    {
+      "title": "pack b into packB along gj over (b0, b1)",
+      "code": "... // zero C\nfor gk in blocks (0 .. K) 16 do\n  for gj in blocks (0 .. N) 8 do\n    for b0 in 0 .. gk.len do\n      for b1 in 0 .. gj.len do\n        store packB[b0, b1] = load b[gk[b0], gj[b1]]\n    for gi in blocks (0 .. M) 16 do\n      for a0 in 0 .. gi.len do\n        for a1 in 0 .. gk.len do\n          store packA[a0, a1] = load a[gi[a0], gk[a1]]\n      lease mut packA_L2 = packA at L2\n      ... // update C from packA_L2 and packB"
+    },
+    {
+      "title": "keep packB along gj within L1 into packB_L1",
+      "code": "... // zero C\nfor gk in blocks (0 .. K) 16 do\n  for gj in blocks (0 .. N) 8 do\n    for b0 in 0 .. gk.len do\n      for b1 in 0 .. gj.len do\n        store packB[b0, b1] = load b[gk[b0], gj[b1]]\n    lease mut packB_L1 = packB at L1\n    for gi in blocks (0 .. M) 16 do\n      for a0 in 0 .. gi.len do\n        for a1 in 0 .. gk.len do\n          store packA[a0, a1] = load a[gi[a0], gk[a1]]\n      lease mut packA_L2 = packA at L2\n      ... // update C from packA_L2 and packB_L1"
+    },
+    {
+      "title": "registers (i, j) into c rows 4 lanes 8 through fma",
+      "code": "... // zero C\nfor gk in blocks (0 .. K) 16 do\n  for gj in blocks (0 .. N) 8 do\n    ... // pack B and keep it at L1\n    for gi in blocks (0 .. M) 16 do\n      ... // pack A and keep it at L2\n      for ui in blocks (0 .. gi.len) 4 do\n        var acc'0: [Vec f32 8; 4] = ...\n        ... // load the current totals from C into acc'0\n        for k in 0 .. gk.len do\n          let lanes: Vec f32 8 = load packB_L1[...] ...\n          for i in 0 .. ui.len do\n            let row: Vec f32 8 = splat (load packA_L2[...])\n            acc'0[i] = fma row lanes acc'0[i]\n        ... // store acc'0 back to C"
+    }
+  ],
+  "fast": [
+    {
+      "title": "packed",
+      "code": "for gk in blocks (0 .. K) 16 do\n  for gj in blocks (0 .. N) 8 do\n    ... // pack B and keep it at L1\n    for gi in blocks (0 .. M) 16 do\n      ... // pack A and keep it at L2\n      for ui in blocks (0 .. gi.len) 4 do\n        var acc'0: [Vec f32 8; 4] = ...\n        ... // load C, accumulate across k, and store C"
+    },
+    {
+      "title": "Larger blocks",
+      "code": "for gk in blocks (0 .. K) 256 do\n  for gj in blocks (0 .. N) 8 do\n    ... // pack B and keep it at L1\n    for gi in blocks (0 .. M) 512 do\n      ... // pack A and keep it at L2\n      for ui in blocks (0 .. gi.len) 4 do\n        var acc'0: [Vec f32 8; 4] = ...\n        ... // load C, accumulate across k, and store C"
+    },
+    {
+      "title": "Rows first",
+      "code": "for gk in blocks (0 .. K) 256 do\n  for gi in blocks (0 .. M) 512 do\n    ... // pack A and keep it at L2\n    for gj in blocks (0 .. N) 8 do\n      ... // pack B and keep it at L1\n      for ui in blocks (0 .. gi.len) 4 do\n        var acc'0: [Vec f32 8; 4] = ...\n        ... // load C, accumulate across k, and store C"
+    },
+    {
+      "title": "A wider tile",
+      "code": "for gk in blocks (0 .. K) 256 do\n  for gi in blocks (0 .. M) 512 do\n    ... // pack A and keep it at L2\n    for gj in blocks (0 .. N) 16 do\n      ... // pack B and keep it at L1\n      for ui in blocks (0 .. gi.len) 4 do\n        var acc'0: [Vec f32 16; 4] = ...\n        ... // load C, accumulate across k, and store C"
+    }
+  ],
+  "sme": [
+    {
+      "title": "The contraction",
+      "code": "for i in 0 .. M do\n  for j in 0 .. N do\n    var acc'0: f64 = -0.0\n    for k in 0 .. K do\n      acc'0 = fma ... acc'0\n    store c[i, j] = acc'0"
+    },
+    {
+      "title": "split k by 3072 as gk ragged",
+      "code": "for i in 0 .. M do\n  for j in 0 .. N do\n    for gk in blocks (0 .. K) 3072 do\n      var acc'0: f64 = if gk.lo == 0 then -0.0 else load c[i, j]\n      for k in 0 .. gk.len do\n        acc'0 = fma ... acc'0\n      store c[i, j] = acc'0"
+    },
+    {
+      "title": "split j by 256 as gj, 16 as uj",
+      "code": "for i in 0 .. M do\n  for gj in 0 .. N / 256 do\n    for uj in blocks (0 .. 256) 16 do\n      for j in 0 .. uj.len do\n        for gk in blocks (0 .. K) 3072 do\n          var acc'0: f64 = if gk.lo == 0 then -0.0 else load c[...]\n          for k in 0 .. gk.len do\n            acc'0 = fma ... acc'0\n          store c[...] = acc'0"
+    },
+    {
+      "title": "split i by 1536 as gi, 32 as ui",
+      "code": "for gi in 0 .. M / 1536 do\n  for ui in blocks (0 .. 1536) 32 do\n    for i in 0 .. ui.len do\n      for gj in 0 .. N / 256 do\n        for uj in blocks (0 .. 256) 16 do\n          for j in 0 .. uj.len do\n            for gk in blocks (0 .. K) 3072 do\n              var acc'0: f64 = if gk.lo == 0 then -0.0 else load c[...]\n              for k in 0 .. gk.len do\n                acc'0 = fma ... acc'0\n              store c[...] = acc'0"
+    },
+    {
+      "title": "order (gk, gj, gi, ui, uj, i, j)",
+      "code": "for gk in blocks (0 .. K) 3072 do\n  for gj in 0 .. N / 256 do\n    for gi in 0 .. M / 1536 do\n      for ui in blocks (0 .. 1536) 32 do\n        for uj in blocks (0 .. 256) 16 do\n          for i in 0 .. ui.len do\n            for j in 0 .. uj.len do\n              var acc'0: f64 = if gk.lo == 0 then -0.0 else load c[...]\n              for k in 0 .. gk.len do\n                acc'0 = fma ... acc'0\n              store c[...] = acc'0"
+    },
+    {
+      "title": "parallel gi",
+      "code": "for gk in blocks (0 .. K) 3072 do\n  for gj in 0 .. N / 256 do\n    grid gi in 0 .. M / 1536\n        writes c[...] do\n      for ui in blocks (0 .. 1536) 32 do\n        for uj in blocks (0 .. 256) 16 do\n          for i in 0 .. ui.len do\n            for j in 0 .. uj.len do\n              var acc'0: f64 = if gk.lo == 0 then -0.0 else load c[...]\n              for k in 0 .. gk.len do\n                acc'0 = fma ... acc'0\n              store c[...] = acc'0"
+    },
+    {
+      "title": "pack a into packA along gk over (a0, a1)",
+      "code": "for gk in blocks (0 .. K) 3072 do\n  for a0 in 0 .. M do\n    for a1 in 0 .. gk.len do\n      store packA[a0, a1] = load a[a0, gk[a1]]\n  for gj in 0 .. N / 256 do\n    grid gi in 0 .. M / 1536\n        writes c[...] do\n      ... // update C from packA and B"
+    },
+    {
+      "title": "strip a0 32 (pa, ra)",
+      "code": "for gk in blocks (0 .. K) 3072 do\n  for pa in 0 .. M / 32 do\n    for ra in 0 .. 32 do\n      for a1 in 0 .. gk.len do\n        store packA[0 + pa * 32 + ra, a1] = load a[...]\n  for gj in 0 .. N / 256 do\n    grid gi in 0 .. M / 1536\n        writes c[...] do\n      ... // update C from packA and B"
+    },
+    {
+      "title": "parallel pa",
+      "code": "for gk in blocks (0 .. K) 3072 do\n  grid pa in 0 .. M / 32 writes packA[...] do\n    for ra in 0 .. 32 do\n      for a1 in 0 .. gk.len do\n        store packA[0 + pa * 32 + ra, a1] = load a[...]\n  for gj in 0 .. N / 256 do\n    grid gi in 0 .. M / 1536\n        writes c[...] do\n      ... // update C from packA and B"
+    },
+    {
+      "title": "pack b into packB along gj over (b0, b1)",
+      "code": "for gk in blocks (0 .. K) 3072 do\n  grid pa in 0 .. M / 32 writes packA[...] do\n    ... // pack A\n  for gj in 0 .. N / 256 do\n    for b0 in 0 .. gk.len do\n      for b1 in 0 .. 256 do\n        store packB[b0, b1] = load b[gk[b0], gj * 256 + b1]\n    grid gi in 0 .. M / 1536\n        writes c[...] do\n      ... // update C from packA and packB"
+    },
+    {
+      "title": "strip b1 16 (pb, rb)",
+      "code": "for gk in blocks (0 .. K) 3072 do\n  grid pa in 0 .. M / 32 writes packA[...] do\n    ... // pack A\n  for gj in 0 .. N / 256 do\n    for b0 in 0 .. gk.len do\n      for pb in 0 .. 256 / 16 do\n        for rb in 0 .. 16 do\n          store packB[b0, 0 + pb * 16 + rb] = load b[...]\n    grid gi in 0 .. M / 1536\n        writes c[...] do\n      ... // update C from packA and packB"
+    },
+    {
+      "title": "interchange (b0, pb)",
+      "code": "for gk in blocks (0 .. K) 3072 do\n  grid pa in 0 .. M / 32 writes packA[...] do\n    ... // pack A\n  for gj in 0 .. N / 256 do\n    for pb in 0 .. 16 do\n      for b0 in 0 .. gk.len do\n        for rb in 0 .. 16 do\n          store packB[b0, 0 + pb * 16 + rb] = load b[...]\n    grid gi in 0 .. M / 1536\n        writes c[...] do\n      ... // update C from packA and packB"
+    },
+    {
+      "title": "parallel pb",
+      "code": "for gk in blocks (0 .. K) 3072 do\n  grid pa in 0 .. M / 32 writes packA[...] do\n    ... // pack A\n  for gj in 0 .. N / 256 do\n    grid pb in 0 .. 16 writes packB[...] do\n      for b0 in 0 .. gk.len do\n        for rb in 0 .. 16 do\n          store packB[b0, 0 + pb * 16 + rb] = load b[...]\n    grid gi in 0 .. M / 1536\n        writes c[...] do\n      ... // update C from packA and packB"
+    },
+    {
+      "title": "registers (i, j) into c rows 32 lanes 16 through fma",
+      "code": "... // pack inputs, and distribute the output bands\nfor ui in blocks (0 .. 1536) 32 do\n  for uj in blocks (0 .. 256) 16 do\n    var acc'0: [Vec f64 16; 32] = ...\n    ... // the 32 × 16 output tile: −0.0 on the first block, else c's\n    for k in 0 .. gk.len do\n      let lanes: Vec f64 16 = ...\n      for i in 0 .. ui.len do\n        let row: Vec f64 16 = ...\n        acc'0[i] = fma row lanes acc'0[i]\n    ... // store the output tile"
+    },
+    {
+      "title": "outer_products i c 8 8 outer_fma_primitive",
+      "code": "... // pack inputs, and distribute the output bands\nfor ui in blocks (0 .. 1536) 32 do\n  for uj in blocks (0 .. 256) 16 do\n    var blocks_2: [Vec f64 (8 * 8); 4 * 2] = ...\n    ... // the same tile as eight 8 × 8 blocks: −0.0, else c's\n    for k in 0 .. gk.len do\n      ... // row and column masks\n      let column_all: Vec f64 32 = load packA[...]\n      let row_all: Vec f64 16 = load packB[...]\n      for q in 0 .. ui.len / 8 * 2 do\n        let column = slice_lanes column_all (floor (q / 2) * 8)\n        let row = slice_lanes row_all (q % 2 * 8)\n        blocks_2[q] =\n          outer_fma_primitive column row blocks_2[q] rows cols\n    ... // store the eight blocks"
+    }
+  ],
+  "flash": [
+    {
+      "title": "The contraction",
+      "code": "for i in 0 .. 64 do\n  for d in 0 .. 16 do\n    var acc'1: Online.Value = Online.empty ()\n    for j in 0 .. 32 do\n      ... // compute this key's score in acc'0\n      acc'1 = Online.combine acc'1 (key acc'0 (load v[j, d]))\n    store y[i, d] = normalised acc'1"
+    },
+    {
+      "title": "The schedule",
+      "code": "grid on M4Gpu gi in 0 .. 2\n    by tile (si, sj) parts [8, 16]\n    writes y[...] as yt do\n  ... // initialise the running summary: m, l and o\n  for gj in 0 .. 4 do\n    ... // compute a 32 × 8 score tile s with mma\n    let m2 = max m (reduce Max f32 over cols by halving do s)\n    let e = exp (s - m2)\n    let alpha = rescale m m2\n    l = l * alpha + (reduce Sum f32 over cols by order do e)\n    let w: [f32; 8, 16] = load v[...]\n    o = o * alpha\n    o = mma e w o\n    m = m2\n  store yt = o / l"
+    }
+  ]
+}

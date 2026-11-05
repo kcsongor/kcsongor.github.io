@@ -1,0 +1,226 @@
+---
+import "./cachet-hardware.css";
+const rows = [0, 1, 2, 3];
+const colours = [
+  "var(--hw-a)",
+  "var(--hw-b)",
+  "var(--hw-c)",
+  "var(--hw-green)",
+];
+---
+
+<cachet-register-tile
+  class="gpu-figure matrix-figure cachet-hardware not-prose"
+>
+  <figure aria-label="Output tile size and independent vector updates">
+    <figcaption>Keeping the vector units busy</figcaption>
+    <div class="hw-toolbar">
+      <div class="hw-options" role="group" aria-label="Output tile size">
+        <button data-width="8" aria-pressed="true" disabled>4 × 8</button>
+        <button data-width="16" aria-pressed="false" disabled>4 × 16</button>
+      </div>
+      <div class="hw-playback">
+        <button data-hw-play aria-pressed="false" disabled>Play</button>
+        <button data-hw-step aria-label="Advance one cycle" disabled
+          >Step</button
+        >
+      </div>
+    </div>
+    <svg
+      class="hw-diagram"
+      viewBox="0 0 690 320"
+      role="group"
+      aria-label="A tile of vector accumulators and four FMA pipelines"
+    >
+      <g data-tile>
+        <text x="20" y="20" class="hw-title">The output tile</text>
+        <text x="20" y="41" class="hw-small hw-muted"
+          >Each group of four totals is one vector.</text
+        >
+        {
+          rows.map(row =>
+            rows.map(group => (
+              <g
+                data-vector
+                data-row={row}
+                data-group={group}
+                style={`color:${colours[row]}`}
+                opacity={group < 2 ? 1 : 0.12}
+              >
+                <rect
+                  x={17 + group * 78}
+                  y={62 + row * 39}
+                  width="73"
+                  height="26"
+                  rx="4"
+                  fill="currentColor"
+                  fill-opacity=".07"
+                  stroke="currentColor"
+                  stroke-opacity=".3"
+                  data-vector-frame
+                />
+                {rows.map(lane => (
+                  <rect
+                    x={20 + group * 78 + lane * 17}
+                    y={65 + row * 39}
+                    width="13"
+                    height="20"
+                    rx="2"
+                    fill="currentColor"
+                    opacity=".3"
+                    data-lane
+                  />
+                ))}
+                <text
+                  x={53 + group * 78}
+                  y={99 + row * 39}
+                  text-anchor="middle"
+                  font-size="11"
+                >
+                  v{group * 4 + row + 1}
+                </text>
+              </g>
+            ))
+          )
+        }
+        <g
+          data-edge
+          transform="translate(174 55)"
+          role="slider"
+          tabindex="0"
+          aria-label="Output tile width"
+          aria-valuemin="8"
+          aria-valuemax="16"
+          aria-valuenow="8"
+          aria-valuetext="8 columns, 8 independent vectors"
+        >
+          <rect x="-20" width="40" height="157" fill="transparent"></rect>
+          <rect x="-2" width="4" height="157" rx="2" fill="var(--hw-muted)"
+          ></rect>
+          <rect
+            class="hw-grip"
+            x="-10"
+            y="59"
+            width="20"
+            height="36"
+            rx="7"
+            fill="var(--background)"
+            stroke="var(--hw-muted)"></rect>
+          <path d="M-3 69v16 M3 69v16" stroke="var(--hw-muted)" fill="none"
+          ></path>
+        </g>
+        <text x="20" y="245" font-size="20" class="hw-mono" data-size
+          >4 × 8</text
+        >
+        <text x="115" y="245" class="hw-small hw-muted" data-vectors
+          >8 independent vectors</text
+        >
+        <text x="20" y="269" class="hw-small hw-muted"
+          >Drag the edge, or choose a size above.</text
+        >
+      </g>
+      <g data-pipelines transform="translate(350 0)">
+        <text x="20" y="20" class="hw-title">Four vector FMA pipelines</text>
+        <text x="20" y="41" class="hw-small hw-muted"
+          >One update per pipeline per cycle.</text
+        >
+        <text x="20" y="58" font-size="11" class="hw-muted">Start</text>
+        <text x="320" y="58" font-size="11" text-anchor="end" class="hw-muted"
+          >Ready, 4 cycles later</text
+        >
+        {
+          rows.map(row => (
+            <g>
+              <rect
+                x="20"
+                y={65 + row * 39}
+                width="300"
+                height="23"
+                rx="11"
+                class="hw-idle"
+              />
+              {[1, 2, 3].map(stage => (
+                <path
+                  d={`M${20 + stage * 75} ${70 + row * 39}v13`}
+                  stroke="var(--border)"
+                />
+              ))}
+              {rows.map(group => (
+                <g
+                  data-packet
+                  data-row={row}
+                  data-group={group}
+                  style={`color:${colours[row]}`}
+                >
+                  <circle r="12" fill="currentColor" />
+                  <text
+                    text-anchor="middle"
+                    y="3"
+                    font-size="10"
+                    style="fill:var(--background)"
+                  >
+                    v{group * 4 + row + 1}
+                  </text>
+                </g>
+              ))}
+              <circle
+                data-arrival
+                data-row={row}
+                cx="326"
+                cy={76.5 + row * 39}
+                r="4"
+                fill={colours[row]}
+                opacity="0"
+              />
+            </g>
+          ))
+        }
+        <text x="20" y="239" class="hw-small hw-muted"
+          >Updates started in four cycles</text
+        >
+        {
+          rows.map(cycle => (
+            <g>
+              <rect
+                data-cycle
+                data-cycle-index={cycle}
+                x={20 + cycle * 49}
+                y="251"
+                width="39"
+                height="28"
+                rx="4"
+                class="hw-idle"
+              />
+              <text
+                data-cycle-count
+                data-cycle-index={cycle}
+                x={39.5 + cycle * 49}
+                y="270"
+                text-anchor="middle"
+                font-size="13"
+              >
+                {cycle < 2 ? "4" : "–"}
+              </text>
+            </g>
+          ))
+        }
+        <text x="20" y="304" class="hw-small" data-issue
+          >Four updates can start.</text
+        >
+      </g>
+    </svg>
+    <p class="hw-caption hw-description" data-explanation aria-live="polite">
+      Eight vectors give us two cycles of work, then two cycles waiting for the
+      first results. Widening the tile gives us more independent totals to
+      update in the meantime.
+    </p>
+    <p class="hw-model">
+      A repeating four-cycle window, slowed down. This isolates the dependency
+      between updates; loads and other instructions are omitted.
+    </p>
+  </figure>
+</cachet-register-tile>
+
+<script>
+  import "./cachet-register-tile.js";
+</script>

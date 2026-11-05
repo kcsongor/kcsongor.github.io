@@ -1,0 +1,128 @@
+---
+import { timing, referenceTiming } from "./cachet-performance.mjs";
+interface Props {
+  schedule?: string;
+  step?: number;
+  title?: string;
+  reference?: string;
+  target?: string;
+  label?: string;
+}
+const { schedule, step = 0, title, reference, target, label } = Astro.props;
+const result = schedule
+  ? timing(schedule, step, title)
+  : referenceTiming(reference!, target!);
+const progress = result.comparison;
+const goal = progress.target;
+---
+
+<div
+  class="cachet-timing not-prose"
+  data-placeholder={progress.placeholder ? "true" : "false"}
+>
+  {label && <p class="timing-label">{label}</p>}
+  <div class="timing-heading">
+    <span>
+      <strong>{result.rate ?? result.duration}</strong>
+      {result.rate && <span class="timing-duration"> · {result.duration}</span>}
+    </span>
+    <span>{progress.percentLabel} of {goal.library}'s speed</span>
+  </div>
+  <div
+    class="timing-track"
+    aria-hidden="true"
+    style={{
+      "--fill": `${progress.width}%`,
+      "--reference": `${progress.targetPosition}%`,
+    }}
+  >
+    <span
+      class="timing-fill"
+      data-timing-fill
+      data-width={progress.width}
+      data-target={goal.key}
+      data-scale={progress.scale}
+    ></span>
+    <span class="timing-reference"></span>
+  </div>
+  <p class="timing-target">
+    100% = {goal.library} · {goal.hardware} · {goal.rate ?? goal.duration}
+    {goal.placeholder && " (placeholder)"}
+  </p>
+  <p class="timing-context">{result.context}</p>
+  {
+    progress.placeholder && (
+      <p class="timing-status">Placeholder, not measured</p>
+    )
+  }
+</div>
+
+<style>
+  .cachet-timing {
+    margin: 1rem 0;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+    color: var(--foreground);
+    --timing-muted: color-mix(
+      in srgb,
+      var(--foreground) 65%,
+      var(--background)
+    );
+    --timing-fill: var(--matrix-first, var(--foreground));
+  }
+  .cachet-timing p {
+    margin: 0;
+  }
+  .timing-label {
+    font-weight: 600;
+    padding-bottom: 0.25rem;
+  }
+  .timing-heading {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.15rem 0.8rem;
+  }
+  .timing-heading strong {
+    font-weight: 600;
+  }
+  .timing-track {
+    height: 0.55rem;
+    position: relative;
+    margin: 0.6rem 0 0.4rem;
+    background: color-mix(in srgb, var(--foreground) 8%, var(--background));
+  }
+  .timing-fill {
+    display: block;
+    height: 100%;
+    width: var(--fill);
+    background: var(--timing-fill);
+  }
+  .timing-reference {
+    position: absolute;
+    left: var(--reference);
+    top: -0.2rem;
+    bottom: -0.2rem;
+    border-left: 1px dashed var(--foreground);
+  }
+  [data-placeholder="true"] .timing-fill {
+    background: repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--timing-fill) 65%, var(--background)) 0 3px,
+      transparent 3px 6px
+    );
+  }
+  .timing-target,
+  .timing-context,
+  .timing-status,
+  .timing-duration {
+    color: var(--timing-muted);
+    font-size: 0.75rem;
+  }
+  @media print {
+    .timing-track {
+      print-color-adjust: exact;
+    }
+  }
+</style>

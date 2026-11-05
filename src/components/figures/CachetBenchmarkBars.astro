@@ -1,0 +1,251 @@
+---
+interface Row {
+  name: string;
+  value: number;
+  note?: string;
+  code?: boolean;
+  library?: boolean;
+  emphasis?: boolean;
+}
+interface Props {
+  title: string;
+  context: string;
+  rows: Row[];
+  unit?: string;
+  rowHeading?: string;
+  baseline?: number;
+  relative?: boolean;
+  maximum?: number;
+}
+const {
+  title,
+  context,
+  rows,
+  unit = "GFLOP/s",
+  rowHeading = "Schedule",
+  baseline,
+  relative = false,
+  maximum = relative && baseline
+    ? baseline *
+      Math.max(
+        1.1,
+        Math.ceil((10 * Math.max(...rows.map(row => row.value))) / baseline) /
+          10
+      )
+    : Math.ceil(Math.max(...rows.map(row => row.value)) / 10) * 10,
+} = Astro.props;
+const width = (value: number) => (100 * value) / maximum;
+const rate = (value: number) =>
+  value.toLocaleString("en-GB", { maximumFractionDigits: value < 10 ? 1 : 0 });
+---
+
+<table class="benchmark-table">
+  <caption>
+    <strong>{title}</strong>
+    <span>{context}</span>
+  </caption>
+  <colgroup>
+    <col class="label-column" />
+    <col />
+    <col class="value-column" />
+    {relative && <col class="share-column" />}
+  </colgroup>
+  <thead>
+    <tr>
+      <th scope="col">{rowHeading}</th>
+      <th class="plot-heading" scope="col">
+        <span class="sr-only">
+          {relative ? "Speed relative to the library" : unit}
+        </span>
+        <span class="axis" aria-hidden="true">
+          <span>0</span>
+          {
+            relative && baseline ? (
+              <span
+                class="reference-label"
+                style={{ left: `${width(baseline)}%` }}
+              >
+                100%
+              </span>
+            ) : (
+              <span class="axis-end">{rate(maximum)}</span>
+            )
+          }
+        </span>
+      </th>
+      <th class="numeric" scope="col">{unit}</th>
+      {
+        relative && (
+          <th class="numeric" scope="col">
+            Library<span class="sr-only"> speed</span>
+          </th>
+        )
+      }
+    </tr>
+  </thead>
+  <tbody>
+    {
+      rows.map(row => (
+        <tr
+          class:list={{
+            "is-library": row.library,
+            "is-emphasis": row.emphasis,
+          }}
+        >
+          <th scope="row">
+            {row.code ? <code>{row.name}</code> : row.name}
+            {row.note && <span class="row-note">{row.note}</span>}
+          </th>
+          <td class="plot" aria-hidden="true">
+            <span class="track">
+              <span class="fill" style={{ width: `${width(row.value)}%` }} />
+              {baseline && (
+                <span
+                  class="reference"
+                  style={{ left: `${width(baseline)}%` }}
+                />
+              )}
+            </span>
+          </td>
+          <td class="numeric value">{rate(row.value)}</td>
+          {relative && baseline && (
+            <td class="numeric share">
+              {Math.round((100 * row.value) / baseline)}%
+            </td>
+          )}
+        </tr>
+      ))
+    }
+  </tbody>
+</table>
+
+<style>
+  .benchmark-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin: 1.5rem 0 0;
+    color: var(--foreground);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+  caption {
+    text-align: left;
+    padding: 0 0 0.65rem;
+  }
+  caption strong {
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  caption > span {
+    display: block;
+    color: var(--matrix-muted);
+    font-size: 0.8rem;
+    margin-top: 0.15rem;
+  }
+  .label-column {
+    width: 30%;
+  }
+  .value-column {
+    width: 4.5rem;
+  }
+  .share-column {
+    width: 3.5rem;
+  }
+  th,
+  td {
+    border: 0;
+    padding: 0.6rem 0;
+    text-align: left;
+    vertical-align: middle;
+  }
+  th {
+    font-weight: 400;
+  }
+  thead th {
+    color: var(--matrix-muted);
+    font-size: 0.7rem;
+    padding-block: 0.3rem 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody th {
+    padding-right: 0.7rem;
+    overflow-wrap: anywhere;
+  }
+  code {
+    font-size: 0.85rem;
+  }
+  .row-note {
+    display: block;
+    margin-top: 0.1rem;
+    color: var(--matrix-muted);
+    font-size: 0.72rem;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+  .axis {
+    display: block;
+    position: relative;
+    font-weight: 400;
+  }
+  .axis-end {
+    float: right;
+  }
+  .reference-label {
+    position: absolute;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+  .track {
+    display: block;
+    height: 0.85rem;
+    position: relative;
+    background: var(--matrix-idle);
+  }
+  .fill {
+    display: block;
+    height: 100%;
+    background: var(--matrix-first);
+  }
+  .reference {
+    position: absolute;
+    top: -0.25rem;
+    bottom: -0.25rem;
+    border-left: 1px dashed var(--foreground);
+    opacity: 0.65;
+  }
+  .numeric {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .share {
+    color: var(--matrix-muted);
+    font-size: 0.78rem;
+  }
+  .is-emphasis th,
+  .is-emphasis .value {
+    font-weight: 600;
+  }
+  .is-library {
+    border-top: 1px solid var(--border);
+  }
+  .is-library .fill {
+    background: color-mix(in srgb, var(--foreground) 40%, var(--background));
+  }
+  @media (max-width: 480px) {
+    .benchmark-table,
+    code {
+      font-size: 0.78rem;
+    }
+    .value-column {
+      width: 3.8rem;
+    }
+    .share-column {
+      width: 3rem;
+    }
+    .row-note {
+      font-size: 0.68rem;
+    }
+  }
+</style>

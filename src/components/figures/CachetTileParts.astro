@@ -1,0 +1,126 @@
+---
+const names = ["x", "y", "acc"];
+---
+
+<cachet-tile-parts class="gpu-figure not-prose">
+  <figure>
+    <figcaption>Whole matrices in the source, parts on the GPU</figcaption>
+    <p class="figure-intro">
+      One step of <code>acc = mma x y acc</code>. Each square below is an 8 × 8
+      matrix block.
+    </p>
+    <div class="figure-controls" aria-label="Select a SIMD group">
+      {
+        [0, 1, 2, 3].map(n => (
+          <button
+            type="button"
+            data-part={n}
+            aria-pressed={n === 0 ? "true" : "false"}
+            disabled
+          >
+            ({Math.floor(n / 2)}, {n % 2})
+          </button>
+        ))
+      }
+    </div>
+    <div class="operand-layout">
+      {
+        names.map(name => (
+          <div class:list={["operand", `operand-${name}`]}>
+            <p class="operand-title">
+              <strong>{name}</strong> ·{" "}
+              {name === "x" ? "16 × 8" : name === "y" ? "8 × 16" : "16 × 16"}
+            </p>
+            <div
+              class:list={["operand-blocks", name]}
+              data-operand={name}
+              role="img"
+              aria-label={`${name}: ${name === "x" ? "top half" : name === "y" ? "left half" : "top-left quarter"} belongs to the selected SIMD group`}
+            >
+              {Array.from({ length: name === "acc" ? 4 : 2 }, (_, n) => (
+                <span data-block={n}>
+                  <span class="matrix-cell-label">8 × 8</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+    <p data-part-detail aria-live="polite">
+      SIMD group (0, 0) holds rows 0–7 of x, columns 0–7 of y, and the top-left
+      8 × 8 part of acc.
+    </p>
+    <p class="figure-note">
+      Select a group to follow its input blocks and accumulator. Completed parts
+      stay filled as you move to another group. Groups in the same row use the
+      same rows of x; groups in the same column use the same columns of y. The
+      moving focus follows your selection; the SIMD groups can work in parallel.
+      This does not imply a shared-memory buffer.
+    </p>
+  </figure>
+</cachet-tile-parts>
+
+<script>
+  import "./cachet-tile-motion.js";
+</script>
+
+<style>
+  .operand-layout {
+    display: grid;
+    --operand-gap: 1rem;
+    grid-template-columns:
+      minmax(0, calc((100% - var(--operand-gap) - 2px) / 3))
+      minmax(0, 1fr);
+    grid-template-areas: ". y" "x acc";
+    align-items: start;
+    width: min(100%, 22rem);
+    gap: var(--operand-gap);
+    margin: 1.25rem auto;
+  }
+  .operand-x {
+    grid-area: x;
+  }
+  .operand-y {
+    grid-area: y;
+  }
+  .operand-acc {
+    grid-area: acc;
+  }
+  .operand-title {
+    margin: 0 0 0.5rem;
+  }
+  .operand-title strong {
+    font-family: var(--font-code);
+  }
+  .operand-blocks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .operand-blocks.x {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+  .operand-blocks > span {
+    aspect-ratio: 1;
+    border: 0;
+    display: grid;
+    place-items: center;
+    font: 0.8rem var(--font-code);
+  }
+  [data-active="true"] {
+    background: var(--figure-accent);
+    color: var(--background);
+  }
+  @media (max-width: 420px) {
+    .operand-layout {
+      --operand-gap: 0.5rem;
+    }
+    .operand-title {
+      font-size: 0.8rem;
+    }
+    .operand-blocks > span {
+      font-size: 0.7rem;
+    }
+  }
+</style>

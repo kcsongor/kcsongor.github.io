@@ -1,0 +1,64 @@
+[
+  {
+    "name": "rows",
+    "n": 4096,
+    "median_s": 0.057279667,
+    "min_s": 0.057227958,
+    "gflops": 2399.44,
+    "reps": 18,
+    "check": "bits",
+    "element": "f32",
+    "where": "GPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04c-gpu/build/4096/rows"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "tiled",
+    "n": 4096,
+    "median_s": 0.026020792,
+    "min_s": 0.0251605,
+    "gflops": 5281.89,
+    "reps": 39,
+    "check": "bits",
+    "element": "f32",
+    "where": "GPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04c-gpu/build/4096/tiled"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "big_tiles",
+    "n": 4096,
+    "median_s": 0.011077208,
+    "min_s": 0.0110205,
+    "gflops": 12407.36,
+    "reps": 50,
+    "check": "bits",
+    "element": "f32",
+    "where": "GPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04c-gpu/build/4096/big_tiles"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "mlx",
+    "n": 4096,
+    "median_s": 0.010481125,
+    "min_s": 0.010421875,
+    "gflops": 13113.0,
+    "reps": 50,
+    "check": "close",
+    "element": "f32",
+    "where": "GPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/.venv/bin/python",
+      "/Users/cs/Dev/kcsongor.github.io/bench/mlx_matmul.py",
+      "4096"
+    ],
+    "environment": {}
+  }
+]

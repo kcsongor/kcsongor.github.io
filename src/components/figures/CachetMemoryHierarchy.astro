@@ -1,0 +1,93 @@
+---
+// Capacities are the ones `platforms/apple-silicon.cachet` records for the
+// M4 Max's performance cores. Bars are on a log scale, up to 32 GiB of DRAM.
+const levels = [
+  {
+    name: "SIMD registers",
+    size: "512 B",
+    bytes: 512,
+    reach: "No memory load between updates.",
+    block: "a 4 × 8 block of",
+    keeps: "c",
+  },
+  {
+    name: "L1 cache",
+    size: "128 KiB",
+    bytes: 2 ** 17,
+    reach: "A load takes a few cycles.",
+    block: "",
+    keeps: "packB",
+  },
+  {
+    name: "L2 cache",
+    size: "16 MiB, shared by six cores",
+    bytes: 2 ** 24,
+    reach: "A load takes tens of cycles.",
+    block: "",
+    keeps: "packA",
+  },
+  {
+    name: "DRAM",
+    size: "tens of GiB",
+    bytes: 2 ** 35,
+    reach: "A load takes hundreds of cycles.",
+    block: "",
+    keeps: "a, b, c",
+  },
+];
+const width = (bytes: number) => `${(100 * Math.log2(bytes)) / 35}%`;
+---
+
+<div class="gpu-figure not-prose">
+  <figure>
+    <figcaption>The memory hierarchy of an M4 Max performance core</figcaption>
+    <ol class="levels">
+      {
+        levels.map(level => (
+          <li>
+            <p class="level-title">
+              <strong>{level.name}</strong> · {level.size}
+            </p>
+            <div class="level-bar" style={{ width: width(level.bytes) }} />
+            <p class="level-detail">
+              {level.reach} <code>packed</code> keeps {level.block}{" "}
+              <code>{level.keeps}</code> here.
+            </p>
+          </li>
+        ))
+      }
+    </ol>
+    <p class="figure-note">
+      The bars are on a logarithmic scale, so each level is far larger than the
+      bar suggests. The register capacity counts the 32 architectural 128-bit
+      SIMD registers, not SME's matrix storage. Load times are illustrative
+      orders of magnitude, not measurements.
+    </p>
+  </figure>
+</div>
+
+<style>
+  .levels {
+    display: grid;
+    gap: 1rem;
+    margin: 1rem 0;
+    padding: 0;
+    list-style: none;
+  }
+  .levels li {
+    margin: 0;
+  }
+  .level-title,
+  .level-detail {
+    margin: 0;
+  }
+  .level-detail {
+    font-size: 0.85rem;
+    color: color-mix(in srgb, var(--foreground) 75%, transparent);
+  }
+  .level-bar {
+    height: 0.75rem;
+    margin: 0.25rem 0;
+    background: var(--matrix-first);
+  }
+</style>

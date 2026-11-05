@@ -1,0 +1,60 @@
+---
+import BenchmarkBars from "./CachetBenchmarkBars.astro";
+import snapshot from "./cachet-benchmarks.json";
+import { target } from "./cachet-performance.mjs";
+
+const targets = [
+  {
+    key: "one_core",
+    schedules: ["matmul", "swapped", "tower", "packed", "fast"],
+  },
+  {
+    key: "all_cores",
+    schedules: ["bands"],
+  },
+  {
+    key: "matrix_units",
+    schedules: ["sme"],
+  },
+  {
+    key: "gpu",
+    schedules: ["rows", "tiled", "big_tiles"],
+  },
+];
+const groups = targets.map(group => {
+  const goal = target(group.key);
+  const run = snapshot.runs[goal.workloadKey as keyof typeof snapshot.runs];
+  const measurements: Record<string, { gflops: number }> = run.measurements;
+  const baseline = goal.gflops;
+  return {
+    title: goal.hardware,
+    context: `${goal.workload} · ${goal.instructions}`,
+    baseline,
+    rows: [
+      ...group.schedules.map((name, index) => ({
+        name,
+        value: measurements[name].gflops,
+        code: true,
+        emphasis: index === group.schedules.length - 1,
+      })),
+      { name: goal.library, value: baseline, library: true },
+    ],
+  };
+});
+---
+
+<div class="gpu-figure matrix-figure not-prose">
+  <figure>
+    <figcaption>How the schedules compare with the libraries</figcaption>
+    <p class="figure-intro">
+      {snapshot.machine}. Higher GFLOP/s means faster multiplication. In each
+      group, the dashed line is the library's speed, set to 100%.
+    </p>
+    {groups.map(group => <BenchmarkBars {...group} relative />)}
+    <p class="figure-note">
+      Bar lengths compare each schedule with its own library baseline, not with the
+      other hardware groups. Matrix size and precision differ between groups; within
+      each group, they are the same for Cachet and the library.
+    </p>
+  </figure>
+</div>

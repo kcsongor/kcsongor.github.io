@@ -57,6 +57,18 @@ html[data-theme="dark"] :is(.astro-code, .shiki-inline) span {
 html[data-theme="dark"] .shiki-inline span {
   color: var(--shiki-dark, inherit);
 }
+/* Keep the original two characters selectable beneath the displayed arrow. */
+.cachet-arrow { display: inline-block; position: relative; }
+.cachet-arrow-source { opacity: 0; }
+.cachet-arrow::after {
+  content: "→" / "";
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  transform: scaleX(1.8);
+  pointer-events: none;
+  user-select: none;
+}
 #article .callout {
   border-color: var(--border);
   background: var(--muted);
@@ -151,6 +163,7 @@ nav[aria-label="breadcrumb"] ul { font-weight: 400; }
 nav[aria-label="breadcrumb"] :is(a, span) { opacity: 1; }
 .post-header { margin-bottom: 2.75rem; }
 .post-header h1 { font-size: clamp(1.875rem, 4vw, 2.5rem); line-height: 1.2; letter-spacing: -.03em; }
+.post-subtitle { margin: .65rem 0 0; color: var(--muted-foreground); font-size: clamp(1.0625rem, 2vw, 1.25rem); font-style: italic; line-height: 1.5; text-wrap: balance; }
 .post-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1rem; font-family: var(--font-code); font-size: .75rem; }
 .post-updated { display: inline-block; }
 #article > :first-child { margin-top: 0; }

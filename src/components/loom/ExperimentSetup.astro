@@ -1,5 +1,6 @@
 ---
 import { Code } from "astro:components";
+import { transformerTokenClasses } from "@/utils/transformers/tokenClasses.mjs";
 import "./loom.css";
 import setup from "../../data/loom/setup.json";
 import { compiledContent as renderBrief } from "../../data/loom/brief.md";
@@ -18,7 +19,7 @@ const [brief, runbook] = await Promise.all([renderBrief(), renderRunbook()]);
 <figure class="loom-figure loom-experiment-setup not-prose">
   <section>
     <h3>Baseline</h3>
-    <Code code={setup.baseline.trimEnd()} lang="markdown" themes={themes} defaultColor={false} />
+    <Code code={setup.baseline.trimEnd()} lang="markdown" themes={themes} defaultColor={false} transformers={[transformerTokenClasses()]} />
     <loom-handouts class="loom-handouts">
       <div class="loom-handout-cards" role="group" aria-label="Experiment handouts" data-handout-controls hidden>
         <button type="button" class="loom-handout-card" id="loom-brief-toggle" aria-controls="loom-brief" aria-expanded="false">
@@ -36,7 +37,7 @@ const [brief, runbook] = await Promise.all([renderBrief(), renderRunbook()]);
   </section>
   <section>
     <h3>Assumption log</h3>
-    <Code code={setup.assumptions.trimEnd()} lang="markdown" themes={themes} defaultColor={false} />
+    <Code code={setup.assumptions.trimEnd()} lang="markdown" themes={themes} defaultColor={false} transformers={[transformerTokenClasses()]} />
   </section>
 </figure>
 

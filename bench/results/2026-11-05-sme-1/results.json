@@ -1,0 +1,32 @@
+[
+  {
+    "name": "sme",
+    "n": 3072,
+    "median_s": 0.064822708,
+    "min_s": 0.064689583,
+    "gflops": 894.47,
+    "reps": 16,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU matrix units, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-05-sme-1/build/3072/sme"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "accelerate_f64",
+    "n": 3072,
+    "median_s": 0.069573062,
+    "min_s": 0.067855542,
+    "gflops": 833.4,
+    "reps": 14,
+    "check": "close",
+    "element": "f64",
+    "where": "CPU matrix unit",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-05-sme-1/build/3072/accelerate_f64"
+    ],
+    "environment": {}
+  }
+]

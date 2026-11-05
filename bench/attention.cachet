@@ -1,0 +1,24 @@
+// The post's attention example: `attend` as a contraction, and `flash`, the
+// schedule the post steps through. `bench/run.py` adds a wrapper for each
+// and times them with `attention_harness.c`.
+module (platform = AppleSilicon)
+import "../../platforms/apple-silicon.cachet"
+import "cachet:monoid"
+import "cachet:steps"
+import "cachet:attention"
+
+contraction attend
+    (reads q: [f32; 64, 16])
+    (reads kt: [f32; 16, 32])
+    (reads v: [f32; 32, 16])
+    -> out y: [f32; 64, 16] =
+  s[i, j] = sum c. q[i, c] * kt[c, j]
+  y[i, d] = normalised (reduce[reassoc] Online j. key (s[i, j]) (v[j, d]))
+
+schedule flash of attend on M4Gpu =
+  split i by 32, j by 8, c by 16
+  grid over i.outer
+  compute s at j.outer
+  reduce j.inner by (max: halving, sum: order)
+  parts [8, 16]
+  element [f32; 8, 8]

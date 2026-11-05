@@ -1,0 +1,3426 @@
+{
+  "swap": [
+    {
+      "title": "The contraction",
+      "source": "contraction matmul\n    (reads a: [f32; M, K])\n    (reads b: [f32; K, N])\n    -> out c: [f32; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule swapped of matmul =\n  zero (i, j) c\n  hoist (j, k) c",
+      "future": [
+        7,
+        8
+      ],
+      "current": null,
+      "output": "fn swapped (reads a: [f32; M, K]) (reads b: [f32; K, N]) -> out c: [f32; M, N]\n=\n  for i in 0 .. M do\n    for j in 0 .. N do\n      var acc'0: f32 = -0.0\n      for k in 0 .. K do\n        acc'0 = fma (load a[i, k]) (load b[k, j]) acc'0\n      store c[i, j] = acc'0",
+      "changed": [],
+      "verdict": null,
+      "note": "Each output adds up its products in ascending order of k, starting from zero.",
+      "links": []
+    },
+    {
+      "title": "zero (i, j) c",
+      "source": "contraction matmul\n    (reads a: [f32; M, K])\n    (reads b: [f32; K, N])\n    -> out c: [f32; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule swapped of matmul =\n  zero (i, j) c\n  hoist (j, k) c",
+      "future": [
+        8
+      ],
+      "current": 7,
+      "output": "fn swapped (reads a: [f32; M, K]) (reads b: [f32; K, N]) -> out c: [f32; M, N]\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n  for i in 0 .. M do\n    for j in 0 .. N do\n      for k in 0 .. K do\n        let acc'0 = load c[i, j]\n        store c[i, j] = fma (load a[i, k]) (load b[k, j]) acc'0",
+      "changed": [
+        2,
+        5,
+        6,
+        7
+      ],
+      "verdict": null,
+      "note": "`zero` stores zero in every cell first, in a loop of its own. The listing shows each sum as updates to its cell, with the same products in the same order.",
+      "links": [
+        {
+          "source": 7,
+          "lines": [
+            2,
+            5,
+            6,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "title": "hoist (j, k) c",
+      "source": "contraction matmul\n    (reads a: [f32; M, K])\n    (reads b: [f32; K, N])\n    -> out c: [f32; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule swapped of matmul =\n  zero (i, j) c\n  hoist (j, k) c",
+      "future": [],
+      "current": 8,
+      "output": "fn swapped (reads a: [f32; M, K]) (reads b: [f32; K, N]) -> out c: [f32; M, N]\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n  for i in 0 .. M do\n    for k in 0 .. K do\n      for j in 0 .. N do\n        let acc'0 = load c[i, j]\n        store c[i, j] = fma (load a[i, k]) (load b[k, j]) acc'0",
+      "changed": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "verdict": "swapped: bits of matmul",
+      "note": "`hoist` runs the sum's steps outside the loop over j, and each cell holds its running total between visits. Each output receives the same multiply-adds in the same order.",
+      "links": [
+        {
+          "source": 7,
+          "lines": [
+            2,
+            6,
+            7
+          ]
+        },
+        {
+          "source": 8,
+          "lines": [
+            4,
+            5,
+            6,
+            7
+          ]
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "title": "The contraction",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule rows of matmul @(S = PlusTimes f32) on M4Gpu =\n  grid over (i, j)",
+      "future": [
+        7
+      ],
+      "current": null,
+      "output": "fn rows (reads a: [f32; M, K]) (reads b: [f32; K, N]) -> out c: [f32; M, N]\n=\n  for i in 0 .. M do\n    for j in 0 .. N do\n      var acc'0: f32 = -0.0\n      for k in 0 .. K do\n        acc'0 = fma (load a[i, k]) (load b[k, j]) acc'0\n      store c[i, j] = acc'0",
+      "changed": [],
+      "verdict": null,
+      "note": "Each output adds up its products in ascending order of k, starting from zero.",
+      "links": []
+    },
+    {
+      "title": "grid over (i, j)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule rows of matmul @(S = PlusTimes f32) on M4Gpu =\n  grid over (i, j)",
+      "future": [],
+      "current": 7,
+      "output": "fn rows (reads a: [f32; M, K]) (reads b: [f32; K, N]) -> out c: [f32; M, N]\n=\n  grid on M4Gpu i in 0 .. M, j in 0 .. N writes c[i, j] as ct do\n    var acc'0: f32 = -0.0\n    for k in 0 .. K do\n      acc'0 = fma (load a[i, k]) (load b[k, j]) acc'0\n    store ct = acc'0",
+      "changed": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "verdict": "rows: bits of matmul_PlusTimes_f32\n  arithmetic: M4Gpu",
+      "note": "Each pair (i, j) runs as one GPU thread. Its write window is one element of c; the inputs may be read by many threads. Each thread's loop over k is unchanged.",
+      "links": [
+        {
+          "source": 7,
+          "lines": [
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        }
+      ]
+    }
+  ],
+  "tiled": [
+    {
+      "title": "The contraction",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule tiled of matmul @(S = PlusTimes f32) on M4Gpu =\n  grid over (i, j)\n  tiles (i, j, k) (16, 16) (8, 8)",
+      "future": [
+        7,
+        8
+      ],
+      "current": null,
+      "output": "fn tiled (reads a: [f32; M, K]) (reads b: [f32; K, N]) -> out c: [f32; M, N]\n=\n  for i in 0 .. M do\n    for j in 0 .. N do\n      var acc'0: f32 = -0.0\n      for k in 0 .. K do\n        acc'0 = fma (load a[i, k]) (load b[k, j]) acc'0\n      store c[i, j] = acc'0",
+      "changed": [],
+      "verdict": null,
+      "note": "Each output adds up its products in ascending order of k, starting from zero.",
+      "links": []
+    },
+    {
+      "title": "grid over (i, j)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule tiled of matmul @(S = PlusTimes f32) on M4Gpu =\n  grid over (i, j)\n  tiles (i, j, k) (16, 16) (8, 8)",
+      "future": [
+        8
+      ],
+      "current": 7,
+      "output": "fn tiled (reads a: [f32; M, K]) (reads b: [f32; K, N]) -> out c: [f32; M, N]\n=\n  grid on M4Gpu i in 0 .. M, j in 0 .. N writes c[i, j] as ct do\n    var acc'0: f32 = -0.0\n    for k in 0 .. K do\n      acc'0 = fma (load a[i, k]) (load b[k, j]) acc'0\n    store ct = acc'0",
+      "changed": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "verdict": null,
+      "note": "Each pair (i, j) gets its own grid iteration, as in `rows`.",
+      "links": [
+        {
+          "source": 7,
+          "lines": [
+            2,
+            3,
+            4,
+            5,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "title": "tiles (i, j, k) (16, 16) (8, 8)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule tiled of matmul @(S = PlusTimes f32) on M4Gpu =\n  grid over (i, j)\n  tiles (i, j, k) (16, 16) (8, 8)",
+      "future": [],
+      "current": 8,
+      "output": "fn tiled (reads a: [f32; M, K]) (reads b: [f32; K, N]) -> out c: [f32; M, N]\nrequires\n  M % 16 == 0,\n  N % 16 == 0,\n  K % 8 == 0\n=\n  grid on M4Gpu gi in 0 .. M / 16,\n                gj in 0 .. N / 16\n      by tile (si, sj) parts [8, 8]\n      writes c[gi * 16 .. gi * 16 + 16, gj * 16 .. gj * 16 + 16] as ct_2 do\n    var t: [f32; 16, 16] = repeat (-0.0)\n    for k in 0 .. K / 8 do\n      let x: [f32; 16, 8] = load a[gi * 16 .. gi * 16 + 16, k * 8 .. k * 8 + 8]\n      let y: [f32; 8, 16] = load b[k * 8 .. k * 8 + 8, gj * 16 .. gj * 16 + 16]\n      t = mma x y t\n    store ct_2 = t",
+      "changed": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "verdict": "tiled: bits of matmul_PlusTimes_f32\n  arithmetic: M4Gpu\n  trusted:\n    template `simdgroup_mma8`",
+      "note": "`tiles` groups the outputs into 16 × 16 tiles, one for each grid iteration, shared among four SIMD groups in 8 × 8 parts, and works through the sum eight steps of k at a time. t starts at zero and holds the tile's running totals across the k loop; x and y are the next pair of input blocks, and `mma` multiplies them and adds the product to t with the device's `simdgroup_mma8`.",
+      "links": [
+        {
+          "source": 8,
+          "lines": [
+            1,
+            2,
+            3,
+            4,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ]
+        }
+      ]
+    }
+  ],
+  "tower": [
+    {
+      "title": "The contraction",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule tower of matmul =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)",
+      "future": [
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "current": null,
+      "output": "fn tower {S : Semiring} (reads a: [S.Value; M, K]) (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N]\n=\n  for i in 0 .. M do\n    for j in 0 .. N do\n      var acc'0: S.Value = S.zero ()\n      for k in 0 .. K do\n        acc'0 = S.mul_add (load a[i, k]) (load b[k, j]) acc'0\n      store c[i, j] = acc'0",
+      "changed": [],
+      "verdict": null,
+      "note": "The generic contraction, and the loop nest it means. Each output adds up its products in ascending order of k.",
+      "links": []
+    },
+    {
+      "title": "zero (i, j) c",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule tower of matmul =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)",
+      "future": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "current": 7,
+      "output": "fn tower {S : Semiring} (reads a: [S.Value; M, K]) (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N]\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = S.zero ()\n  for i in 0 .. M do\n    for j in 0 .. N do\n      for k in 0 .. K do\n        let acc'0 = load c[i, j]\n        store c[i, j] = S.mul_add (load a[i, k]) (load b[k, j]) acc'0",
+      "changed": [
+        3,
+        6,
+        7,
+        8
+      ],
+      "verdict": null,
+      "note": "Every cell is zeroed first, and its sum then starts from what the cell holds.",
+      "links": [
+        {
+          "source": 7,
+          "lines": [
+            3,
+            6,
+            7,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "title": "split k by 16 as gk ragged",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule tower of matmul =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)",
+      "future": [
+        9,
+        10,
+        11
+      ],
+      "current": 8,
+      "output": "fn tower {S : Semiring} (reads a: [S.Value; M, K]) (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N]\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = S.zero ()\n  for i in 0 .. M do\n    for j in 0 .. N do\n      for gk in blocks (0 .. K) 16 do\n        for k in 0 .. gk.len do\n          let acc'0 = load c[i, j]\n          store c[i, j] = S.mul_add (load a[i, gk[k]]) (load b[gk[k], j]) acc'0",
+      "changed": [
+        6,
+        7,
+        8,
+        9
+      ],
+      "verdict": null,
+      "note": "The sum runs in blocks of at most 16 steps, gk, each continuing from what the cell holds. As in the earlier chunking example, each output keeps one running total and receives the same products in the same order.",
+      "links": [
+        {
+          "source": 7,
+          "lines": [
+            3,
+            8
+          ]
+        },
+        {
+          "source": 8,
+          "lines": [
+            6,
+            7,
+            8,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "title": "split i by 16 as gi, 4 as ui ragged",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule tower of matmul =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)",
+      "future": [
+        10,
+        11
+      ],
+      "current": 9,
+      "output": "fn tower {S : Semiring} (reads a: [S.Value; M, K]) (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N]\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = S.zero ()\n  for gi in blocks (0 .. M) 16 do\n    for ui in blocks (0 .. gi.len) 4 do\n      for i in 0 .. ui.len do\n        for j in 0 .. N do\n          for gk in blocks (0 .. K) 16 do\n            for k in 0 .. gk.len do\n              let acc'0 = load c[gi[ui[i]], j]\n              store c[gi[ui[i]], j] = S.mul_add (load a[gi[ui[i]], gk[k]]) (load b[gk[k], j]) acc'0",
+      "changed": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "verdict": null,
+      "note": "The rows are cut into blocks of 16, gi, and each block into groups of four rows, ui. i now picks a row within those four.",
+      "links": [
+        {
+          "source": 7,
+          "lines": [
+            3
+          ]
+        },
+        {
+          "source": 8,
+          "lines": [
+            8,
+            9
+          ]
+        },
+        {
+          "source": 9,
+          "lines": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "title": "split j by 8 as gj ragged",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule tower of matmul =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)",
+      "future": [
+        11
+      ],
+      "current": 10,
+      "output": "fn tower {S : Semiring} (reads a: [S.Value; M, K]) (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N]\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = S.zero ()\n  for gi in blocks (0 .. M) 16 do\n    for ui in blocks (0 .. gi.len) 4 do\n      for i in 0 .. ui.len do\n        for gj in blocks (0 .. N) 8 do\n          for j in 0 .. gj.len do\n            for gk in blocks (0 .. K) 16 do\n              for k in 0 .. gk.len do\n                let acc'0 = load c[gi[ui[i]], gj[j]]\n                store c[gi[ui[i]], gj[j]] =\n                  S.mul_add\n                    (load a[gi[ui[i]], gk[k]])\n                    (load b[gk[k], gj[j]])\n                    acc'0",
+      "changed": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "verdict": null,
+      "note": "The columns are cut into blocks of 8, gj, and j picks a column within a block.",
+      "links": [
+        {
+          "source": 7,
+          "lines": [
+            3
+          ]
+        },
+        {
+          "source": 8,
+          "lines": [
+            9,
+            10
+          ]
+        },
+        {
+          "source": 9,
+          "lines": [
+            4,
+            5,
+            6
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16
+          ]
+        }
+      ]
+    },
+    {
+      "title": "order (gk, gj, gi, ui, i, j)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule tower of matmul =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)",
+      "future": [],
+      "current": 11,
+      "output": "fn tower {S : Semiring} (reads a: [S.Value; M, K]) (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N]\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = S.zero ()\n\n  for gk in blocks (0 .. K) 16 do\n    for gj in blocks (0 .. N) 8 do\n      for gi in blocks (0 .. M) 16 do\n        for ui in blocks (0 .. gi.len) 4 do\n          for i in 0 .. ui.len do\n            for j in 0 .. gj.len do\n              for k in 0 .. gk.len do\n                let acc'0 = load c[gi[ui[i]], gj[j]]\n                store c[gi[ui[i]], gj[j]] =\n                  S.mul_add\n                    (load a[gi[ui[i]], gk[k]])\n                    (load b[gk[k], gj[j]])\n                    acc'0",
+      "changed": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "verdict": "tower: bits of matmul",
+      "note": "`order` puts the depth blocks outside the output loops. Within each depth block, it visits 16 × 8 output blocks, the blocks of columns outside the blocks of rows. Each output continues from its previous total, receiving the same products in the same order.",
+      "links": [
+        {
+          "source": 7,
+          "lines": [
+            3
+          ]
+        },
+        {
+          "source": 8,
+          "lines": [
+            5,
+            11
+          ]
+        },
+        {
+          "source": 9,
+          "lines": [
+            7,
+            8,
+            9
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            6,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pack a into packA along gi over (a0, a1)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule packed of matmul @(S = PlusTimes f32)\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM) =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)\n  pack a into packA along gi over (a0, a1)\n  keep packA along gi within L2 into packA_L2\n  pack b into packB along gj over (b0, b1)\n  keep packB along gj within L1 into packB_L1\n  registers (i, j) into c rows 4 lanes 8 through fma",
+      "future": [
+        15,
+        16,
+        17,
+        18
+      ],
+      "current": 14,
+      "output": "fn packed (reads a: [f32; M, K]) (reads b: [f32; K, N]) (mut c: [f32; M, N])\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\nproduces Init c\nscratch packA\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n\n  for gk in blocks (0 .. K) 16 do\n    for gj in blocks (0 .. N) 8 do\n      for gi in blocks (0 .. M) 16 do\n        for a0 in 0 .. gi.len do\n          for a1 in 0 .. gk.len do store packA[a0, a1] = load a[gi[a0], gk[a1]]\n        for ui in blocks (0 .. gi.len) 4 do\n          for i in 0 .. ui.len do\n            for j in 0 .. gj.len do\n              for k in 0 .. gk.len do\n                let acc'0 = load c[gi[ui[i]], gj[j]]\n                store c[gi[ui[i]], gj[j]] =\n                  fma\n                    (load packA[gi[ui[i]] - gi.lo, gk[k] - gk.lo])\n                    (load b[gk[k], gj[j]])\n                    acc'0",
+      "changed": [
+        1,
+        3,
+        10,
+        11,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21
+      ],
+      "verdict": null,
+      "note": "`pack` copies the block of A that the loops gi and gk pick out into a scratch buffer, packA, which becomes a parameter. The kernel reads the copy instead of a.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            5
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            7,
+            15
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            9,
+            12,
+            13
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            8,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            7,
+            8,
+            9,
+            12,
+            13,
+            14
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            3,
+            10,
+            11,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21
+          ]
+        }
+      ]
+    },
+    {
+      "title": "keep packA along gi within L2 into packA_L2",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule packed of matmul @(S = PlusTimes f32)\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM) =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)\n  pack a into packA along gi over (a0, a1)\n  keep packA along gi within L2 into packA_L2\n  pack b into packB along gj over (b0, b1)\n  keep packB along gj within L1 into packB_L1\n  registers (i, j) into c rows 4 lanes 8 through fma",
+      "future": [
+        16,
+        17,
+        18
+      ],
+      "current": 15,
+      "output": "fn packed (reads a: [f32; M, K]) (reads b: [f32; K, N]) (mut c: [f32; M, N])\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\nproduces Init c\nscratch packA\nworking_set\n  @L2 { keep packA = descriptor packA }\nmovement\n  traffic packA_pull = ceil (K / 16) * ceil (N / 8) * ceil (M / 16) *\n    lines (span_bytes packA.span) from DRAM to L2 and back\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n\n  for gk in blocks (0 .. K) 16 do\n    for gj in blocks (0 .. N) 8 do\n      for gi in blocks (0 .. M) 16 do\n        for a0 in 0 .. gi.len do\n          for a1 in 0 .. gk.len do store packA[a0, a1] = load a[gi[a0], gk[a1]]\n        lease mut packA_L2 = packA at L2\n        for ui in blocks (0 .. gi.len) 4 do\n          for i in 0 .. ui.len do\n            for j in 0 .. gj.len do\n              for k in 0 .. gk.len do\n                let acc'0 = load c[gi[ui[i]], gj[j]]\n                store c[gi[ui[i]], gj[j]] =\n                  fma\n                    (load packA_L2[gi[ui[i]] - gi.lo, gk[k] - gk.lo])\n                    (load b[gk[k], gj[j]])\n                    acc'0",
+      "changed": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        17,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "verdict": null,
+      "note": "`keep` says that packA stays in L2 while it's used, and adds that to the function's working set.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            10
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            12,
+            21
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            14,
+            18,
+            19
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            13,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            12,
+            13,
+            14,
+            18,
+            19,
+            20
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            3,
+            15,
+            16,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            17,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pack b into packB along gj over (b0, b1)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule packed of matmul @(S = PlusTimes f32)\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM) =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)\n  pack a into packA along gi over (a0, a1)\n  keep packA along gi within L2 into packA_L2\n  pack b into packB along gj over (b0, b1)\n  keep packB along gj within L1 into packB_L1\n  registers (i, j) into c rows 4 lanes 8 through fma",
+      "future": [
+        17,
+        18
+      ],
+      "current": 16,
+      "output": "fn packed (reads a: [f32; M, K]) (reads b: [f32; K, N]) (mut c: [f32; M, N])\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM)\nproduces Init c\nscratch packA, packB\nworking_set\n  @L2 { keep packA = descriptor packA }\nmovement\n  traffic packA_pull = ceil (K / 16) * ceil (N / 8) * ceil (M / 16) *\n    lines (span_bytes packA.span) from DRAM to L2 and back\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n\n  for gk in blocks (0 .. K) 16 do\n    for gj in blocks (0 .. N) 8 do\n      for b0 in 0 .. gk.len do\n        for b1 in 0 .. gj.len do store packB[b0, b1] = load b[gk[b0], gj[b1]]\n      for gi in blocks (0 .. M) 16 do\n        for a0 in 0 .. gi.len do\n          for a1 in 0 .. gk.len do store packA[a0, a1] = load a[gi[a0], gk[a1]]\n        lease mut packA_L2 = packA at L2\n        for ui in blocks (0 .. gi.len) 4 do\n          for i in 0 .. ui.len do\n            for j in 0 .. gj.len do\n              for k in 0 .. gk.len do\n                let acc'0 = load c[gi[ui[i]], gj[j]]\n                store c[gi[ui[i]], gj[j]] =\n                  fma\n                    (load packA_L2[gi[ui[i]] - gi.lo, gk[k] - gk.lo])\n                    (load packB[gk[k] - gk.lo, gj[j] - gj.lo])\n                    acc'0",
+      "changed": [
+        2,
+        4,
+        15,
+        16,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30
+      ],
+      "verdict": null,
+      "note": "`pack` copies the block of B into packB, which becomes another parameter of the kernel.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            11
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            13,
+            24
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            17,
+            21,
+            22
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            14,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            13,
+            14,
+            17,
+            21,
+            22,
+            23
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            18,
+            19,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            5,
+            6,
+            7,
+            8,
+            9,
+            20,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            2,
+            4,
+            15,
+            16,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "title": "keep packB along gj within L1 into packB_L1",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule packed of matmul @(S = PlusTimes f32)\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM) =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)\n  pack a into packA along gi over (a0, a1)\n  keep packA along gi within L2 into packA_L2\n  pack b into packB along gj over (b0, b1)\n  keep packB along gj within L1 into packB_L1\n  registers (i, j) into c rows 4 lanes 8 through fma",
+      "future": [
+        18
+      ],
+      "current": 17,
+      "output": "fn packed (reads a: [f32; M, K]) (reads b: [f32; K, N]) (mut c: [f32; M, N])\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM)\nproduces Init c\nscratch packA, packB\nworking_set\n  @L1 { keep packB = descriptor packB }\n  @L2 { keep packA = descriptor packA }\nmovement\n  traffic packB_pull = ceil (K / 16) * ceil (N / 8) *\n    lines (span_bytes packB.span) from DRAM to L1 and back\n  traffic packA_pull = ceil (K / 16) * ceil (N / 8) * ceil (M / 16) *\n    lines (span_bytes packA.span) from DRAM to L2 and back\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n\n  for gk in blocks (0 .. K) 16 do\n    for gj in blocks (0 .. N) 8 do\n      for b0 in 0 .. gk.len do\n        for b1 in 0 .. gj.len do store packB[b0, b1] = load b[gk[b0], gj[b1]]\n      lease mut packB_L1 = packB at L1\n      for gi in blocks (0 .. M) 16 do\n        for a0 in 0 .. gi.len do\n          for a1 in 0 .. gk.len do store packA[a0, a1] = load a[gi[a0], gk[a1]]\n        lease mut packA_L2 = packA at L2\n        for ui in blocks (0 .. gi.len) 4 do\n          for i in 0 .. ui.len do\n            for j in 0 .. gj.len do\n              for k in 0 .. gk.len do\n                let acc'0 = load c[gi[ui[i]], gj[j]]\n                store c[gi[ui[i]], gj[j]] =\n                  fma\n                    (load packA_L2[gi[ui[i]] - gi.lo, gk[k] - gk.lo])\n                    (load packB_L1[gk[k] - gk.lo, gj[j] - gj.lo])\n                    acc'0",
+      "changed": [
+        6,
+        9,
+        10,
+        20,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34
+      ],
+      "verdict": null,
+      "note": "`keep` records that packB is to stay in L1 while it is used.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            14
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            16,
+            28
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            21,
+            25,
+            26
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            17,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            16,
+            17,
+            21,
+            25,
+            26,
+            27
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            22,
+            23,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            5,
+            7,
+            8,
+            11,
+            12,
+            24,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            2,
+            4,
+            18,
+            19
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            6,
+            9,
+            10,
+            20,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34
+          ]
+        }
+      ]
+    },
+    {
+      "title": "registers (i, j) into c rows 4 lanes 8 through fma",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule packed of matmul @(S = PlusTimes f32)\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM) =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)\n  pack a into packA along gi over (a0, a1)\n  keep packA along gi within L2 into packA_L2\n  pack b into packB along gj over (b0, b1)\n  keep packB along gj within L1 into packB_L1\n  registers (i, j) into c rows 4 lanes 8 through fma",
+      "future": [],
+      "current": 18,
+      "output": "fn packed (reads a: [f32; M, K]) (reads b: [f32; K, N]) (mut c: [f32; M, N])\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM)\nproduces Init c\nscratch packA, packB\nworking_set\n  @L1 { keep packB = descriptor packB }\n  @L2 { keep packA = descriptor packA }\nmovement\n  traffic packB_pull = ceil (K / 16) * ceil (N / 8) *\n    lines (span_bytes packB.span) from DRAM to L1 and back\n  traffic packA_pull = ceil (K / 16) * ceil (N / 8) * ceil (M / 16) *\n    lines (span_bytes packA.span) from DRAM to L2 and back\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n\n  for gk in blocks (0 .. K) 16 do\n    for gj in blocks (0 .. N) 8 do\n      for b0 in 0 .. gk.len do\n        for b1 in 0 .. gj.len do store packB[b0, b1] = load b[gk[b0], gj[b1]]\n      lease mut packB_L1 = packB at L1\n      for gi in blocks (0 .. M) 16 do\n        for a0 in 0 .. gi.len do\n          for a1 in 0 .. gk.len do store packA[a0, a1] = load a[gi[a0], gk[a1]]\n        lease mut packA_L2 = packA at L2\n        for ui in blocks (0 .. gi.len) 4 do\n          let none: Vec f32 8 = splat (0 as f32)\n          var acc'0: [Vec f32 8; 4] = repeat none\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            acc'0[i] = load c[at_row, gj[0] .. gj[0] + gj.len] else 0 as f32\n          for k in 0 .. gk.len do\n            let lanes: Vec f32 8 =\n              load packB_L1[gk[k] - gk.lo, gj[0] - gj.lo .. gj[0] - gj.lo +\n                gj.len] else 0 as f32\n            for i in 0 .. ui.len do\n              let at_row = gi[ui[i]]\n              let row: Vec f32 8 =\n                splat (load packA_L2[gi[ui[i]] - gi.lo, gk[k] - gk.lo])\n              acc'0[i] = fma row lanes acc'0[i]\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            store c[at_row, gj[0] .. gj[0] + gj.len] = acc'0[i]",
+      "changed": [
+        26,
+        27,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42
+      ],
+      "verdict": "packed: bits of matmul_PlusTimes_f32",
+      "note": "`registers` holds a 4 × 8 block of c across the depth loop: four rows of two four-lane vectors, updated with vector `fma`. This ties the schedule to `PlusTimes f32`.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            14
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            16,
+            31
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            21,
+            25,
+            28,
+            35,
+            40
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            17
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            16,
+            17,
+            21,
+            25,
+            28
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            22,
+            23
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            5,
+            7,
+            8,
+            11,
+            12,
+            24
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            2,
+            4,
+            18,
+            19
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            6,
+            9,
+            10,
+            20
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            26,
+            27,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42
+          ]
+        }
+      ]
+    }
+  ],
+  "fast": [
+    {
+      "title": "packed",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule packed of matmul @(S = PlusTimes f32)\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM) =\n  zero (i, j) c\n  split k by 16 as gk ragged\n  split i by 16 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)\n  pack a into packA along gi over (a0, a1)\n  keep packA along gi within L2 into packA_L2\n  pack b into packB along gj over (b0, b1)\n  keep packB along gj within L1 into packB_L1\n  registers (i, j) into c rows 4 lanes 8 through fma",
+      "future": [],
+      "current": 18,
+      "output": "fn packed (reads a: [f32; M, K]) (reads b: [f32; K, N]) (mut c: [f32; M, N])\n    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 16, 8] at DRAM)\nproduces Init c\nscratch packA, packB\nworking_set\n  @L1 { keep packB = descriptor packB }\n  @L2 { keep packA = descriptor packA }\nmovement\n  traffic packB_pull = ceil (K / 16) * ceil (N / 8) *\n    lines (span_bytes packB.span) from DRAM to L1 and back\n  traffic packA_pull = ceil (K / 16) * ceil (N / 8) * ceil (M / 16) *\n    lines (span_bytes packA.span) from DRAM to L2 and back\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n\n  for gk in blocks (0 .. K) 16 do\n    for gj in blocks (0 .. N) 8 do\n      for b0 in 0 .. gk.len do\n        for b1 in 0 .. gj.len do store packB[b0, b1] = load b[gk[b0], gj[b1]]\n      lease mut packB_L1 = packB at L1\n      for gi in blocks (0 .. M) 16 do\n        for a0 in 0 .. gi.len do\n          for a1 in 0 .. gk.len do store packA[a0, a1] = load a[gi[a0], gk[a1]]\n        lease mut packA_L2 = packA at L2\n        for ui in blocks (0 .. gi.len) 4 do\n          let none: Vec f32 8 = splat (0 as f32)\n          var acc'0: [Vec f32 8; 4] = repeat none\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            acc'0[i] = load c[at_row, gj[0] .. gj[0] + gj.len] else 0 as f32\n          for k in 0 .. gk.len do\n            let lanes: Vec f32 8 =\n              load packB_L1[gk[k] - gk.lo, gj[0] - gj.lo .. gj[0] - gj.lo +\n                gj.len] else 0 as f32\n            for i in 0 .. ui.len do\n              let at_row = gi[ui[i]]\n              let row: Vec f32 8 =\n                splat (load packA_L2[gi[ui[i]] - gi.lo, gk[k] - gk.lo])\n              acc'0[i] = fma row lanes acc'0[i]\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            store c[at_row, gj[0] .. gj[0] + gj.len] = acc'0[i]",
+      "changed": null,
+      "verdict": "packed: bits of matmul_PlusTimes_f32",
+      "note": "`packed` as we left it: blocks of 16 rows, 8 columns and 16 steps of depth, and a 4 × 8 register tile.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            14
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            16,
+            31
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            21,
+            25,
+            28,
+            35,
+            40
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            17
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            16,
+            17,
+            21,
+            25,
+            28
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            22,
+            23
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            5,
+            7,
+            8,
+            11,
+            12,
+            24
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            2,
+            4,
+            18,
+            19
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            6,
+            9,
+            10,
+            20
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            26,
+            27,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Larger blocks",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule larger of matmul @(S = PlusTimes f32)\n    (mut packA: [f32; 512, 256] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 256, 8] at DRAM) =\n  zero (i, j) c\n  split k by 256 as gk ragged\n  split i by 512 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gj, gi, ui, i, j)\n  pack a into packA along gi over (a0, a1)\n  strip_blocks_ragged a0 4 (pa, ra)\n  interchange (ra, a1)\n  keep packA along gi within L2 into packA_L2\n  pack b into packB along gj over (b0, b1)\n  keep packB along gj within L1 into packB_L1\n  registers (i, j) into c rows 4 lanes 8 through fma",
+      "future": [],
+      "current": 20,
+      "output": "fn larger (reads a: [f32; M, K]) (reads b: [f32; K, N]) (mut c: [f32; M, N])\n    (mut packA: [f32; 512, 256] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 256, 8] at DRAM)\nproduces Init c\nscratch packA, packB\nworking_set\n  @L1 { keep packB = descriptor packB }\n  @L2 { keep packA = descriptor packA }\nmovement\n  traffic packB_pull = ceil (K / 256) * ceil (N / 8) *\n    lines (span_bytes packB.span) from DRAM to L1 and back\n  traffic packA_pull = ceil (K / 256) * ceil (N / 8) * ceil (M / 512) *\n    lines (span_bytes packA.span) from DRAM to L2 and back\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n\n  for gk in blocks (0 .. K) 256 do\n    for gj in blocks (0 .. N) 8 do\n      for b0 in 0 .. gk.len do\n        for b1 in 0 .. gj.len do store packB[b0, b1] = load b[gk[b0], gj[b1]]\n      lease mut packB_L1 = packB at L1\n      for gi in blocks (0 .. M) 512 do\n        for pa in blocks (0 .. gi.len) 4 do\n          for a1 in 0 .. gk.len do\n            for ra in 0 .. pa.len do\n              store packA[pa[ra], a1] = load a[gi[pa[ra]], gk[a1]]\n        lease mut packA_L2 = packA at L2\n        for ui in blocks (0 .. gi.len) 4 do\n          let none: Vec f32 8 = splat (0 as f32)\n          var acc'0: [Vec f32 8; 4] = repeat none\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            acc'0[i] = load c[at_row, gj[0] .. gj[0] + gj.len] else 0 as f32\n          for k in 0 .. gk.len do\n            let lanes: Vec f32 8 =\n              load packB_L1[gk[k] - gk.lo, gj[0] - gj.lo .. gj[0] - gj.lo +\n                gj.len] else 0 as f32\n            for i in 0 .. ui.len do\n              let at_row = gi[ui[i]]\n              let row: Vec f32 8 =\n                splat (load packA_L2[gi[ui[i]] - gi.lo, gk[k] - gk.lo])\n              acc'0[i] = fma row lanes acc'0[i]\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            store c[at_row, gj[0] .. gj[0] + gj.len] = acc'0[i]",
+      "changed": null,
+      "verdict": "larger: bits of matmul_PlusTimes_f32",
+      "note": "A's blocks grow to 512 rows by 256 columns, half a megabyte each, kept in L2, and A is copied four rows at a time. B's grow to 256 by 8, kept in L1. The loop order is unchanged.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            14
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            16,
+            33
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            21,
+            27,
+            30,
+            37,
+            42
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            17
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            16,
+            17,
+            21,
+            27,
+            30
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            22,
+            23,
+            24,
+            25
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            23,
+            24
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            5,
+            7,
+            8,
+            11,
+            12,
+            26
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            2,
+            4,
+            18,
+            19
+          ]
+        },
+        {
+          "source": 19,
+          "lines": [
+            6,
+            9,
+            10,
+            20
+          ]
+        },
+        {
+          "source": 20,
+          "lines": [
+            28,
+            29,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Rows first",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule rows_first of matmul @(S = PlusTimes f32)\n    (mut packA: [f32; 512, 256] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 256, 8] at DRAM) =\n  zero (i, j) c\n  split k by 256 as gk ragged\n  split i by 512 as gi, 4 as ui ragged\n  split j by 8 as gj ragged\n  order (gk, gi, gj, ui, i, j)\n  pack a into packA along gi over (a0, a1)\n  strip_blocks_ragged a0 4 (pa, ra)\n  interchange (ra, a1)\n  keep packA along gi within L2 into packA_L2\n  pack b into packB along gj over (b0, b1)\n  keep packB along gj within L1 into packB_L1\n  registers (i, j) into c rows 4 lanes 8 through fma",
+      "future": [],
+      "current": 20,
+      "output": "fn rows_first (reads a: [f32; M, K]) (reads b: [f32; K, N]) (mut c: [f32; M, N])\n    (mut packA: [f32; 512, 256] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 256, 8] at DRAM)\nproduces Init c\nscratch packA, packB\nworking_set\n  @L2 { keep packA = descriptor packA }\n  @L1 { keep packB = descriptor packB }\nmovement\n  traffic packA_pull = ceil (K / 256) * ceil (M / 512) *\n    lines (span_bytes packA.span) from DRAM to L2 and back\n  traffic packB_pull = ceil (K / 256) * ceil (M / 512) * ceil (N / 8) *\n    lines (span_bytes packB.span) from DRAM to L1 and back\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n\n  for gk in blocks (0 .. K) 256 do\n    for gi in blocks (0 .. M) 512 do\n      for pa in blocks (0 .. gi.len) 4 do\n        for a1 in 0 .. gk.len do\n          for ra in 0 .. pa.len do\n            store packA[pa[ra], a1] = load a[gi[pa[ra]], gk[a1]]\n      lease mut packA_L2 = packA at L2\n\n      for gj in blocks (0 .. N) 8 do\n        for b0 in 0 .. gk.len do\n          for b1 in 0 .. gj.len do store packB[b0, b1] = load b[gk[b0], gj[b1]]\n        lease mut packB_L1 = packB at L1\n        for ui in blocks (0 .. gi.len) 4 do\n          let none: Vec f32 8 = splat (0 as f32)\n          var acc'0: [Vec f32 8; 4] = repeat none\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            acc'0[i] = load c[at_row, gj[0] .. gj[0] + gj.len] else 0 as f32\n          for k in 0 .. gk.len do\n            let lanes: Vec f32 8 =\n              load packB_L1[gk[k] - gk.lo, gj[0] - gj.lo .. gj[0] - gj.lo +\n                gj.len] else 0 as f32\n            for i in 0 .. ui.len do\n              let at_row = gi[ui[i]]\n              let row: Vec f32 8 =\n                splat (load packA_L2[gi[ui[i]] - gi.lo, gk[k] - gk.lo])\n              acc'0[i] = fma row lanes acc'0[i]\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            store c[at_row, gj[0] .. gj[0] + gj.len] = acc'0[i]",
+      "changed": null,
+      "verdict": "rows_first: bits of matmul_PlusTimes_f32",
+      "note": "`order` now puts the blocks of rows, gi, outside the blocks of columns, gj, so each panel of A is packed once per depth block and then used with every panel of B.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            14
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            16,
+            34
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            17,
+            28,
+            31,
+            38,
+            43
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            24
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            16,
+            17,
+            24,
+            28,
+            31
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            18,
+            19,
+            20,
+            21
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            19,
+            20
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            5,
+            6,
+            8,
+            9,
+            10,
+            22
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            2,
+            4,
+            25,
+            26
+          ]
+        },
+        {
+          "source": 19,
+          "lines": [
+            7,
+            11,
+            12,
+            27
+          ]
+        },
+        {
+          "source": 20,
+          "lines": [
+            29,
+            30,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45
+          ]
+        }
+      ]
+    },
+    {
+      "title": "A wider tile",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule fast of matmul @(S = PlusTimes f32)\n    (mut packA: [f32; 512, 256] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 256, 16] at DRAM) =\n  zero (i, j) c\n  split k by 256 as gk ragged\n  split i by 512 as gi, 4 as ui ragged\n  split j by 16 as gj ragged\n  order (gk, gi, gj, ui, i, j)\n  pack a into packA along gi over (a0, a1)\n  strip_blocks_ragged a0 4 (pa, ra)\n  interchange (ra, a1)\n  keep packA along gi within L2 into packA_L2\n  pack b into packB along gj over (b0, b1)\n  keep packB along gj within L1 into packB_L1\n  registers (i, j) into c rows 4 lanes 16 through fma",
+      "future": [],
+      "current": 20,
+      "output": "fn fast (reads a: [f32; M, K]) (reads b: [f32; K, N]) (mut c: [f32; M, N])\n    (mut packA: [f32; 512, 256] in PanelMajor 4 at DRAM)\n    (mut packB: [f32; 256, 16] at DRAM)\nproduces Init c\nscratch packA, packB\nworking_set\n  @L2 { keep packA = descriptor packA }\n  @L1 { keep packB = descriptor packB }\nmovement\n  traffic packA_pull = ceil (K / 256) * ceil (M / 512) *\n    lines (span_bytes packA.span) from DRAM to L2 and back\n  traffic packB_pull = ceil (K / 256) * ceil (M / 512) * ceil (N / 16) *\n    lines (span_bytes packB.span) from DRAM to L1 and back\n=\n  for zi in 0 .. M do for zj in 0 .. N do store c[zi, zj] = -0.0\n\n  for gk in blocks (0 .. K) 256 do\n    for gi in blocks (0 .. M) 512 do\n      for pa in blocks (0 .. gi.len) 4 do\n        for a1 in 0 .. gk.len do\n          for ra in 0 .. pa.len do\n            store packA[pa[ra], a1] = load a[gi[pa[ra]], gk[a1]]\n      lease mut packA_L2 = packA at L2\n\n      for gj in blocks (0 .. N) 16 do\n        for b0 in 0 .. gk.len do\n          for b1 in 0 .. gj.len do store packB[b0, b1] = load b[gk[b0], gj[b1]]\n        lease mut packB_L1 = packB at L1\n        for ui in blocks (0 .. gi.len) 4 do\n          let none: Vec f32 16 = splat (0 as f32)\n          var acc'0: [Vec f32 16; 4] = repeat none\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            acc'0[i] = load c[at_row, gj[0] .. gj[0] + gj.len] else 0 as f32\n          for k in 0 .. gk.len do\n            let lanes: Vec f32 16 =\n              load packB_L1[gk[k] - gk.lo, gj[0] - gj.lo .. gj[0] - gj.lo +\n                gj.len] else 0 as f32\n            for i in 0 .. ui.len do\n              let at_row = gi[ui[i]]\n              let row: Vec f32 16 =\n                splat (load packA_L2[gi[ui[i]] - gi.lo, gk[k] - gk.lo])\n              acc'0[i] = fma row lanes acc'0[i]\n          for i in 0 .. ui.len do\n            let at_row = gi[ui[i]]\n            store c[at_row, gj[0] .. gj[0] + gj.len] = acc'0[i]",
+      "changed": null,
+      "verdict": "fast: bits of matmul_PlusTimes_f32",
+      "note": "The register tile is 4 × 16: four rows of four vectors, giving us sixteen independent chains. The columns are blocked by 16 to match, and so are B's panels.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            14
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            16,
+            34
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            17,
+            28,
+            31,
+            38,
+            43
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            24
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            16,
+            17,
+            24,
+            28,
+            31
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            18,
+            19,
+            20,
+            21
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            19,
+            20
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            5,
+            6,
+            8,
+            9,
+            10,
+            22
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            2,
+            4,
+            25,
+            26
+          ]
+        },
+        {
+          "source": 19,
+          "lines": [
+            7,
+            11,
+            12,
+            27
+          ]
+        },
+        {
+          "source": 20,
+          "lines": [
+            29,
+            30,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45
+          ]
+        }
+      ]
+    }
+  ],
+  "sme": [
+    {
+      "title": "The contraction",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": null,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) -> out c: [f64; M, N]\n=\n  for i in 0 .. M do\n    for j in 0 .. N do\n      var acc'0: f64 = -0.0\n      for k in 0 .. K do\n        acc'0 = fma (load a[i, k]) (load b[k, j]) acc'0\n      store c[i, j] = acc'0",
+      "changed": [],
+      "verdict": null,
+      "note": "The same contraction as before.",
+      "links": []
+    },
+    {
+      "title": "split k by 3072 as gk ragged",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 9,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) -> out c: [f64; M, N]\nrequires 0 < K\n=\n  for i in 0 .. M do\n    for j in 0 .. N do\n      for gk in blocks (0 .. K) 3072 do\n        var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[i, j])\n        for k in 0 .. gk.len do\n          acc'0 = fma (load a[i, gk[k]]) (load b[gk[k], j]) acc'0\n        store c[i, j] = acc'0",
+      "changed": [
+        0,
+        1,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "verdict": null,
+      "note": "The sum is split into blocks of up to 3072 steps, gk. The first starts each running total at −0.0; later blocks continue from the value stored in c. At 3072 × 3072, one block covers the whole sum, so c is only written, never cleared or read.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            1,
+            5,
+            6,
+            7,
+            8,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "title": "split j by 256 as gj, 16 as uj",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 10,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) -> out c: [f64; M, N]\nrequires\n  N % 256 == 0,\n  N fits u64,\n  0 < K\n=\n  for i in 0 .. M do\n    for gj in 0 .. N / 256 do\n      for uj in blocks (0 .. 256) 16 do\n        for j in 0 .. uj.len do\n          for gk in blocks (0 .. K) 3072 do\n            var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[i, 0 + gj * 256 + uj[j]])\n            for k in 0 .. gk.len do\n              acc'0 =\n                fma\n                  (load a[i, gk[k]])\n                  (load b[gk[k], 0 + gj * 256 + uj[j]])\n                  acc'0\n            store c[i, 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18
+      ],
+      "verdict": null,
+      "note": "The columns are cut into blocks of 256, gj, one packed block of B each, and each block into groups of 16, uj.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            10,
+            12
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            1,
+            2,
+            3,
+            4,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "title": "split i by 1536 as gi, 32 as ui",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 11,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) -> out c: [f64; M, N]\nrequires\n  M % 1536 == 0,\n  M fits u64,\n  N % 256 == 0,\n  N fits u64,\n  0 < K\n=\n  for gi in 0 .. M / 1536 do\n    for ui in blocks (0 .. 1536) 32 do\n      for i in 0 .. ui.len do\n        for gj in 0 .. N / 256 do\n          for uj in blocks (0 .. 256) 16 do\n            for j in 0 .. uj.len do\n              for gk in blocks (0 .. K) 3072 do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load a[0 + gi * 1536 + ui[i], gk[k]])\n                      (load b[gk[k], 0 + gj * 256 + uj[j]])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        0,
+        2,
+        3,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "verdict": null,
+      "note": "The rows are cut into bands of 1536, gi, each visited 32 rows at a time, ui. At 3072 × 3072 that's two bands, one for each of the M4 Max's two performance clusters, each with its own matrix unit.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            14,
+            16
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            1,
+            4,
+            5,
+            6,
+            11,
+            12,
+            13,
+            17,
+            18,
+            20,
+            21
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            2,
+            3,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "title": "order (gk, gj, gi, ui, uj, i, j)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 12,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) -> out c: [f64; M, N]\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64\n=\n  for gk in blocks (0 .. K) 3072 do\n    for gj in 0 .. N / 256 do\n      for gi in 0 .. M / 1536 do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            for i in 0 .. ui.len do\n              for j in 0 .. uj.len do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load a[0 + gi * 1536 + ui[i], gk[k]])\n                      (load b[gk[k], 0 + gj * 256 + uj[j]])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        0,
+        2,
+        5,
+        6,
+        8,
+        9,
+        10,
+        11,
+        13,
+        14
+      ],
+      "verdict": null,
+      "note": "`order` puts the depth blocks first, then the blocks of columns and the bands of rows. Within a band, uj runs inside ui, so we visit the tiles across the same 32 rows of c before moving down to the next 32.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            8,
+            16
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            1,
+            3,
+            4,
+            9,
+            12,
+            14,
+            17,
+            18,
+            20,
+            21
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            5,
+            10,
+            11,
+            12,
+            13,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            2,
+            5,
+            6,
+            8,
+            9,
+            10,
+            11,
+            13,
+            14
+          ]
+        }
+      ]
+    },
+    {
+      "title": "parallel gi",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 13,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) -> out c: [f64; M, N]\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64\n=\n  for gk in blocks (0 .. K) 3072 do\n    for gj in 0 .. N / 256 do\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            for i in 0 .. ui.len do\n              for j in 0 .. uj.len do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load a[0 + gi * 1536 + ui[i], gk[k]])\n                      (load b[gk[k], 0 + gj * 256 + uj[j]])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        10,
+        11
+      ],
+      "verdict": null,
+      "note": "The bands run as a grid on the host, one thread each.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            8,
+            17
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            1,
+            3,
+            4,
+            9,
+            13,
+            15,
+            18,
+            19,
+            21,
+            22
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            5,
+            12,
+            13,
+            14,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            2,
+            5,
+            6,
+            8,
+            9,
+            12,
+            14,
+            15
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            10,
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pack a into packA along gk over (a0, a1)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 14,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) (mut c: [f64; M, N])\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\nproduces Init c\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64\nscratch packA\n=\n  for gk in blocks (0 .. K) 3072 do\n    for a0 in 0 .. M do\n      for a1 in 0 .. gk.len do store packA[a0, a1] = load a[a0, gk[a1]]\n    for gj in 0 .. N / 256 do\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            for i in 0 .. ui.len do\n              for j in 0 .. uj.len do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load packA[0 + gi * 1536 + ui[i], gk[k] - gk.lo])\n                      (load b[gk[k], 0 + gj * 256 + uj[j]])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        1,
+        9,
+        12,
+        13,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28
+      ],
+      "verdict": null,
+      "note": "`pack` copies each depth block of A into packA, for every row.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            11,
+            22
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            3,
+            5,
+            6,
+            14,
+            18,
+            20,
+            23,
+            24,
+            26,
+            27
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            7,
+            17,
+            18,
+            19,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            4,
+            7,
+            8,
+            11,
+            14,
+            17,
+            19,
+            20
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            15,
+            16
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            9,
+            12,
+            13,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28
+          ]
+        }
+      ]
+    },
+    {
+      "title": "strip a0 32 (pa, ra)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 15,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) (mut c: [f64; M, N])\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\nproduces Init c\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64,\n  M % 32 == 0,\n  M fits u64\nscratch packA\n=\n  for gk in blocks (0 .. K) 3072 do\n    for pa in 0 .. M / 32 do\n      for ra in 0 .. 32 do\n        for a1 in 0 .. gk.len do\n          store packA[0 + pa * 32 + ra, a1] = load a[0 + pa * 32 + ra, gk[a1]]\n    for gj in 0 .. N / 256 do\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            for i in 0 .. ui.len do\n              for j in 0 .. uj.len do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load packA[0 + gi * 1536 + ui[i], gk[k] - gk.lo])\n                      (load b[gk[k], 0 + gj * 256 + uj[j]])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        8,
+        9,
+        14,
+        15,
+        16,
+        17
+      ],
+      "verdict": null,
+      "note": "`strip` divides A's copying loop into panels of 32 rows.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            13,
+            26
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            3,
+            5,
+            6,
+            18,
+            22,
+            24,
+            27,
+            28,
+            30,
+            31
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            7,
+            8,
+            21,
+            22,
+            23,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            4,
+            7,
+            10,
+            13,
+            18,
+            21,
+            23,
+            24
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            19,
+            20
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            11,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            8,
+            9,
+            14,
+            15,
+            16,
+            17
+          ]
+        }
+      ]
+    },
+    {
+      "title": "parallel pa",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 16,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) (mut c: [f64; M, N])\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\nproduces Init c\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64,\n  M % 32 == 0,\n  M fits u64\nscratch packA\n=\n  for gk in blocks (0 .. K) 3072 do\n    grid pa in 0 .. M / 32 writes packA[pa * 32 .. pa * 32 + 32, 0 .. gk.len] do\n      for ra in 0 .. 32 do\n        for a1 in 0 .. gk.len do\n          store packA[0 + pa * 32 + ra, a1] = load a[0 + pa * 32 + ra, gk[a1]]\n    for gj in 0 .. N / 256 do\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            for i in 0 .. ui.len do\n              for j in 0 .. uj.len do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load packA[0 + gi * 1536 + ui[i], gk[k] - gk.lo])\n                      (load b[gk[k], 0 + gj * 256 + uj[j]])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        14
+      ],
+      "verdict": null,
+      "note": "The panels of A are copied in parallel.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            13,
+            26
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            3,
+            5,
+            6,
+            18,
+            22,
+            24,
+            27,
+            28,
+            30,
+            31
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            7,
+            8,
+            21,
+            22,
+            23,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            4,
+            7,
+            10,
+            13,
+            18,
+            21,
+            23,
+            24
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            19,
+            20
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            11,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            8,
+            9,
+            15,
+            16,
+            17
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            14
+          ]
+        }
+      ]
+    },
+    {
+      "title": "pack b into packB along gj over (b0, b1)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 17,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) (mut c: [f64; M, N])\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM)\nproduces Init c\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64,\n  M % 32 == 0,\n  M fits u64\nscratch packA, packB\n=\n  for gk in blocks (0 .. K) 3072 do\n    grid pa in 0 .. M / 32 writes packA[pa * 32 .. pa * 32 + 32, 0 .. gk.len] do\n      for ra in 0 .. 32 do\n        for a1 in 0 .. gk.len do\n          store packA[0 + pa * 32 + ra, a1] = load a[0 + pa * 32 + ra, gk[a1]]\n    for gj in 0 .. N / 256 do\n      for b0 in 0 .. gk.len do\n        for b1 in 0 .. 256 do\n          store packB[b0, b1] = load b[gk[b0], gj * 256 + b1]\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            for i in 0 .. ui.len do\n              for j in 0 .. uj.len do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load packA[0 + gi * 1536 + ui[i], gk[k] - gk.lo])\n                      (load packB[gk[k] - gk.lo, 0 + gj * 256 + uj[j] -\n                         gj * 256])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        2,
+        12,
+        20,
+        21,
+        22,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37
+      ],
+      "verdict": null,
+      "note": "`pack` copies each block of B into packB.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            14,
+            30
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            4,
+            6,
+            7,
+            19,
+            26,
+            28,
+            31,
+            32,
+            36
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            8,
+            9,
+            25,
+            26,
+            27,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            5,
+            8,
+            11,
+            14,
+            19,
+            25,
+            27,
+            28
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            23,
+            24
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            9,
+            10,
+            16,
+            17,
+            18
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            15
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            2,
+            12,
+            20,
+            21,
+            22,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37
+          ]
+        }
+      ]
+    },
+    {
+      "title": "strip b1 16 (pb, rb)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        19,
+        20,
+        21,
+        22
+      ],
+      "current": 18,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) (mut c: [f64; M, N])\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM)\nproduces Init c\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64,\n  M % 32 == 0,\n  M fits u64,\n  256 % 16 == 0,\n  256 fits u64\nscratch packA, packB\n=\n  for gk in blocks (0 .. K) 3072 do\n    grid pa in 0 .. M / 32 writes packA[pa * 32 .. pa * 32 + 32, 0 .. gk.len] do\n      for ra in 0 .. 32 do\n        for a1 in 0 .. gk.len do\n          store packA[0 + pa * 32 + ra, a1] = load a[0 + pa * 32 + ra, gk[a1]]\n    for gj in 0 .. N / 256 do\n      for b0 in 0 .. gk.len do\n        for pb in 0 .. 256 / 16 do\n          for rb in 0 .. 16 do\n            store packB[b0, 0 + pb * 16 + rb] =\n              load b[gk[b0], gj * 256 + (0 + pb * 16 + rb)]\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            for i in 0 .. ui.len do\n              for j in 0 .. uj.len do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load packA[0 + gi * 1536 + ui[i], gk[k] - gk.lo])\n                      (load packB[gk[k] - gk.lo, 0 + gj * 256 + uj[j] -\n                         gj * 256])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        12,
+        13,
+        23,
+        24,
+        25,
+        26
+      ],
+      "verdict": null,
+      "note": "`strip` divides B's columns into panels of 16.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            16,
+            34
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            4,
+            6,
+            7,
+            21,
+            30,
+            32,
+            35,
+            36,
+            40
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            8,
+            9,
+            11,
+            29,
+            30,
+            31,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            5,
+            8,
+            16,
+            21,
+            29,
+            31,
+            32
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            27,
+            28
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            9,
+            10,
+            11,
+            18,
+            19,
+            20
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            17
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            2,
+            14,
+            22,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            12,
+            13,
+            23,
+            24,
+            25,
+            26
+          ]
+        }
+      ]
+    },
+    {
+      "title": "interchange (b0, pb)",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        20,
+        21,
+        22
+      ],
+      "current": 19,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) (mut c: [f64; M, N])\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM)\nproduces Init c\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64,\n  M % 32 == 0,\n  M fits u64,\n  256 % 16 == 0,\n  256 fits u64\nscratch packA, packB\n=\n  for gk in blocks (0 .. K) 3072 do\n    grid pa in 0 .. M / 32 writes packA[pa * 32 .. pa * 32 + 32, 0 .. gk.len] do\n      for ra in 0 .. 32 do\n        for a1 in 0 .. gk.len do\n          store packA[0 + pa * 32 + ra, a1] = load a[0 + pa * 32 + ra, gk[a1]]\n    for gj in 0 .. N / 256 do\n      for pb in 0 .. 16 do\n        for b0 in 0 .. gk.len do\n          for rb in 0 .. 16 do\n            store packB[b0, 0 + pb * 16 + rb] =\n              load b[gk[b0], gj * 256 + (0 + pb * 16 + rb)]\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            for i in 0 .. ui.len do\n              for j in 0 .. uj.len do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load packA[0 + gi * 1536 + ui[i], gk[k] - gk.lo])\n                      (load packB[gk[k] - gk.lo, 0 + gj * 256 + uj[j] -\n                         gj * 256])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        22,
+        23
+      ],
+      "verdict": null,
+      "note": "`interchange` moves the panel loop, pb, outside the row loop, b0, so the copy visits one panel at a time.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            16,
+            34
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            4,
+            6,
+            7,
+            21,
+            30,
+            32,
+            35,
+            36,
+            40
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            8,
+            9,
+            11,
+            29,
+            30,
+            31,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            5,
+            8,
+            16,
+            21,
+            29,
+            31,
+            32
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            27,
+            28
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            9,
+            10,
+            11,
+            18,
+            19,
+            20
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            17
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            2,
+            14,
+            23,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            12,
+            13,
+            24,
+            25,
+            26
+          ]
+        },
+        {
+          "source": 19,
+          "lines": [
+            22,
+            23
+          ]
+        }
+      ]
+    },
+    {
+      "title": "parallel pb",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        21,
+        22
+      ],
+      "current": 20,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) (mut c: [f64; M, N])\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM)\nproduces Init c\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64,\n  M % 32 == 0,\n  M fits u64,\n  256 % 16 == 0,\n  256 fits u64\nscratch packA, packB\n=\n  for gk in blocks (0 .. K) 3072 do\n    grid pa in 0 .. M / 32 writes packA[pa * 32 .. pa * 32 + 32, 0 .. gk.len] do\n      for ra in 0 .. 32 do\n        for a1 in 0 .. gk.len do\n          store packA[0 + pa * 32 + ra, a1] = load a[0 + pa * 32 + ra, gk[a1]]\n    for gj in 0 .. N / 256 do\n      grid pb in 0 .. 16 writes packB[0 .. gk.len, pb * 16 .. pb * 16 + 16] do\n        for b0 in 0 .. gk.len do\n          for rb in 0 .. 16 do\n            store packB[b0, 0 + pb * 16 + rb] =\n              load b[gk[b0], gj * 256 + (0 + pb * 16 + rb)]\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            for i in 0 .. ui.len do\n              for j in 0 .. uj.len do\n                var acc'0: f64 = (if gk.lo == 0 then -0.0 else load c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]])\n                for k in 0 .. gk.len do\n                  acc'0 =\n                    fma\n                      (load packA[0 + gi * 1536 + ui[i], gk[k] - gk.lo])\n                      (load packB[gk[k] - gk.lo, 0 + gj * 256 + uj[j] -\n                         gj * 256])\n                      acc'0\n                store c[0 + gi * 1536 + ui[i], 0 + gj * 256 + uj[j]] = acc'0",
+      "changed": [
+        22
+      ],
+      "verdict": null,
+      "note": "The panels of B are copied in parallel.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            16,
+            34
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            4,
+            6,
+            7,
+            21,
+            30,
+            32,
+            35,
+            36,
+            40
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            8,
+            9,
+            11,
+            29,
+            30,
+            31,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            5,
+            8,
+            16,
+            21,
+            29,
+            31,
+            32
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            27,
+            28
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            9,
+            10,
+            11,
+            18,
+            19,
+            20
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            17
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            2,
+            14,
+            23,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            12,
+            13,
+            24,
+            25,
+            26
+          ]
+        },
+        {
+          "source": 19,
+          "lines": [
+            23
+          ]
+        },
+        {
+          "source": 20,
+          "lines": [
+            22
+          ]
+        }
+      ]
+    },
+    {
+      "title": "registers (i, j) into c rows 32 lanes 16 through fma",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [
+        22
+      ],
+      "current": 21,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) (mut c: [f64; M, N])\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM)\nproduces Init c\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64,\n  M % 32 == 0,\n  M fits u64,\n  256 % 16 == 0,\n  256 fits u64\nscratch packA, packB\n=\n  for gk in blocks (0 .. K) 3072 do\n    grid pa in 0 .. M / 32 writes packA[pa * 32 .. pa * 32 + 32, 0 .. gk.len] do\n      for ra in 0 .. 32 do\n        for a1 in 0 .. gk.len do\n          store packA[0 + pa * 32 + ra, a1] = load a[0 + pa * 32 + ra, gk[a1]]\n    for gj in 0 .. N / 256 do\n      grid pb in 0 .. 16 writes packB[0 .. gk.len, pb * 16 .. pb * 16 + 16] do\n        for b0 in 0 .. gk.len do\n          for rb in 0 .. 16 do\n            store packB[b0, 0 + pb * 16 + rb] =\n              load b[gk[b0], gj * 256 + (0 + pb * 16 + rb)]\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            let none: Vec f64 16 = splat (0 as f64)\n            var acc'0: [Vec f64 16; 32] = repeat none\n            for i in 0 .. ui.len do\n              let at_row = 0 + gi * 1536 + ui[i]\n              acc'0[i] =\n                if gk.lo == 0 then splat (-0.0)\n                else\n                  load c[at_row, 0 + gj * 256 + uj[0] .. 0 + gj * 256 + uj[0] +\n                    uj.len] else 0 as f64\n            for k in 0 .. gk.len do\n              let lanes: Vec f64 16 =\n                load packB[gk[k] - gk.lo, 0 + gj * 256 + uj[0] - gj * 256 .. 0 +\n                  gj * 256 +\n                  uj[0] -\n                  gj * 256 +\n                  uj.len] else 0 as f64\n              for i in 0 .. ui.len do\n                let at_row = 0 + gi * 1536 + ui[i]\n                let row: Vec f64 16 =\n                  splat (load packA[0 + gi * 1536 + ui[i], gk[k] - gk.lo])\n                acc'0[i] = fma row lanes acc'0[i]\n            for i in 0 .. ui.len do\n              let at_row = 0 + gi * 1536 + ui[i]\n              store c[at_row, 0 + gj * 256 + uj[0] .. 0 + gj * 256 + uj[0] +\n                uj.len] =\n                acc'0[i]",
+      "changed": [
+        31,
+        32,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56
+      ],
+      "verdict": null,
+      "note": "`registers` keeps the running totals for a 32 × 16 block of c in registers throughout the depth loop, updating them with vector `fma`.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            16,
+            40
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            4,
+            6,
+            7,
+            21,
+            30
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            8,
+            9,
+            11,
+            29,
+            30,
+            33,
+            47,
+            52
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            5,
+            8,
+            16,
+            21,
+            29,
+            33
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            27,
+            28
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            9,
+            10,
+            11,
+            18,
+            19,
+            20
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            17
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            2,
+            14,
+            23
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            12,
+            13,
+            24,
+            25,
+            26
+          ]
+        },
+        {
+          "source": 19,
+          "lines": [
+            23
+          ]
+        },
+        {
+          "source": 20,
+          "lines": [
+            22
+          ]
+        },
+        {
+          "source": 21,
+          "lines": [
+            31,
+            32,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            46,
+            47,
+            48,
+            49,
+            50,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56
+          ]
+        }
+      ]
+    },
+    {
+      "title": "outer_products i c 8 8 outer_fma_primitive",
+      "source": "contraction matmul {S : Semiring}\n    (reads a: [S.Value; M, K])\n    (reads b: [S.Value; K, N])\n    -> out c: [S.Value; M, N] =\n  c[i, j] = sum k. a[i, k] * b[k, j]\n\nschedule sme of matmul @(S = PlusTimes f64)\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =\n  split k by 3072 as gk ragged\n  split j by 256 as gj, 16 as uj\n  split i by 1536 as gi, 32 as ui\n  order (gk, gj, gi, ui, uj, i, j)\n  parallel gi\n  pack a into packA along gk over (a0, a1)\n  strip a0 32 (pa, ra)\n  parallel pa\n  pack b into packB along gj over (b0, b1)\n  strip b1 16 (pb, rb)\n  interchange (b0, pb)\n  parallel pb\n  registers (i, j) into c rows 32 lanes 16 through fma\n  outer_products i c 8 8 outer_fma_primitive",
+      "future": [],
+      "current": 22,
+      "output": "fn sme (reads a: [f64; M, K]) (reads b: [f64; K, N]) (mut c: [f64; M, N])\n    (mut packA: [f64; M, 3072] in PanelMajor 32)\n    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM)\nproduces Init c\nrequires\n  0 < K,\n  N % 256 == 0,\n  N fits u64,\n  M % 1536 == 0,\n  M fits u64,\n  M % 32 == 0,\n  M fits u64,\n  256 % 16 == 0,\n  256 fits u64\nscratch packA, packB\n=\n  for gk in blocks (0 .. K) 3072 do\n    grid pa in 0 .. M / 32 writes packA[pa * 32 .. pa * 32 + 32, 0 .. gk.len] do\n      for ra in 0 .. 32 do\n        for a1 in 0 .. gk.len do\n          store packA[0 + pa * 32 + ra, a1] = load a[0 + pa * 32 + ra, gk[a1]]\n    for gj in 0 .. N / 256 do\n      grid pb in 0 .. 16 writes packB[0 .. gk.len, pb * 16 .. pb * 16 + 16] do\n        for b0 in 0 .. gk.len do\n          for rb in 0 .. 16 do\n            store packB[b0, 0 + pb * 16 + rb] =\n              load b[gk[b0], gj * 256 + (0 + pb * 16 + rb)]\n      grid gi in 0 .. M / 1536\n          writes c[gi * 1536 .. gi * 1536 + 1536, gj * 256 .. gj * 256 + 256] do\n        for ui in blocks (0 .. 1536) 32 do\n          for uj in blocks (0 .. 256) 16 do\n            let zero: Vec f64 (8 * 8) = splat (0 as f64)\n            var blocks_2: [Vec f64 (8 * 8); 4 * 2] = repeat zero\n            for b_2 in 0 .. ui.len / 8 * 2 do\n              let at_row = 0 + gi * 1536 + ui[floor (b_2 / 2) * 8]\n              let yj = 0 + gj * 256 + uj[0] + b_2 % 2 * 8\n              blocks_2[b_2] =\n                if gk.lo == 0 then splat (-0.0)\n                else load c[at_row .. at_row + 8, yj .. yj + 8]\n            for k in 0 .. gk.len do\n              let rows: Mask 8 = prefix_mask 8\n              let cols: Mask 8 = prefix_mask 8\n              let column_all: Vec f64 32 =\n                load packA[0 + gi * 1536 + ui[0] .. 0 + gi * 1536 + ui[0] +\n                  32, gk[k] - gk.lo]\n              let row_all: Vec f64 16 =\n                load packB[gk[k] - gk.lo, 0 + gj * 256 + uj[0] - gj * 256 .. 0 +\n                  gj * 256 +\n                  uj[0] -\n                  gj * 256 +\n                  uj.len] else 0 as f64\n              for q in 0 .. ui.len / 8 * 2 do\n                let column: Vec f64 8 =\n                  slice_lanes column_all (floor (q / 2) * 8)\n                let row: Vec f64 8 = slice_lanes row_all (q % 2 * 8)\n                blocks_2[q] =\n                  outer_fma_primitive column row blocks_2[q] rows cols\n            for b_2 in 0 .. ui.len / 8 * 2 do\n              let at_row = 0 + gi * 1536 + ui[floor (b_2 / 2) * 8]\n              let yj = 0 + gj * 256 + uj[0] + b_2 % 2 * 8\n              store c[at_row .. at_row + 8, yj .. yj + 8] = blocks_2[b_2]",
+      "changed": [
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        38,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60
+      ],
+      "verdict": "sme: bits of matmul_PlusTimes_f64",
+      "note": "`outer_products` uses the matrix unit to hold those totals as eight 8 × 8 blocks. For each step of k, it updates them with outer products from a column of A and a row of B. The LLVM backend selects the matrix instructions.",
+      "links": [
+        {
+          "source": 9,
+          "lines": [
+            16,
+            39
+          ]
+        },
+        {
+          "source": 10,
+          "lines": [
+            4,
+            6,
+            7,
+            21,
+            30
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            8,
+            9,
+            11,
+            29,
+            30
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            5,
+            8,
+            16,
+            21,
+            29
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            27,
+            28
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            1
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            9,
+            10,
+            11,
+            18,
+            19,
+            20
+          ]
+        },
+        {
+          "source": 16,
+          "lines": [
+            17
+          ]
+        },
+        {
+          "source": 17,
+          "lines": [
+            2,
+            14,
+            23
+          ]
+        },
+        {
+          "source": 18,
+          "lines": [
+            12,
+            13,
+            24,
+            25,
+            26
+          ]
+        },
+        {
+          "source": 19,
+          "lines": [
+            23
+          ]
+        },
+        {
+          "source": 20,
+          "lines": [
+            22
+          ]
+        },
+        {
+          "source": 21,
+          "lines": [
+            37,
+            39,
+            46,
+            47,
+            48,
+            49,
+            50
+          ]
+        },
+        {
+          "source": 22,
+          "lines": [
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            38,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+            51,
+            52,
+            53,
+            54,
+            55,
+            56,
+            57,
+            58,
+            59,
+            60
+          ]
+        }
+      ]
+    }
+  ],
+  "flash": [
+    {
+      "title": "The contraction",
+      "source": "contraction attend\n    (reads q: [f32; 64, 16])\n    (reads kt: [f32; 16, 32])\n    (reads v: [f32; 32, 16])\n    -> out y: [f32; 64, 16] =\n  s[i, j] = sum c. q[i, c] * kt[c, j]\n  y[i, d] =\n    normalised (reduce[reassoc] Online j. key (s[i, j]) (v[j, d]))\n\nschedule flash of attend on M4Gpu =\n  split i by 32, j by 8, c by 16\n  grid over i.outer\n  compute s at j.outer\n  reduce j.inner by (max: halving, sum: order)\n  parts [8, 16]\n  element [f32; 8, 8]",
+      "future": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
+      ],
+      "current": null,
+      "output": "fn flash (reads q: [f32; 64, 16]) (reads kt: [f32; 16, 32])\n    (reads v: [f32; 32, 16]) -> out y: [f32; 64, 16]\n=\n  for i in 0 .. 64 do\n    for d in 0 .. 16 do\n      var acc'1: Online.Value = Online.empty ()\n      for j in 0 .. 32 do\n        var acc'0: f32 = -0.0\n        for c'0 in 0 .. 16 do\n          acc'0 = fma (load q[i, c'0]) (load kt[c'0, j]) acc'0\n        acc'1 = Online.combine acc'1 (key acc'0 (load v[j, d]))\n      store y[i, d] = normalised acc'1",
+      "changed": [],
+      "verdict": null,
+      "note": "One contraction, with the scores as an intermediate.",
+      "links": []
+    },
+    {
+      "title": "The schedule",
+      "source": "contraction attend\n    (reads q: [f32; 64, 16])\n    (reads kt: [f32; 16, 32])\n    (reads v: [f32; 32, 16])\n    -> out y: [f32; 64, 16] =\n  s[i, j] = sum c. q[i, c] * kt[c, j]\n  y[i, d] =\n    normalised (reduce[reassoc] Online j. key (s[i, j]) (v[j, d]))\n\nschedule flash of attend on M4Gpu =\n  split i by 32, j by 8, c by 16\n  grid over i.outer\n  compute s at j.outer\n  reduce j.inner by (max: halving, sum: order)\n  parts [8, 16]\n  element [f32; 8, 8]",
+      "future": [],
+      "current": 15,
+      "output": "fn flash (reads q: [f32; 64, 16]) (reads kt: [f32; 16, 32])\n    (reads v: [f32; 32, 16]) -> out y: [f32; 64, 16]\n=\n  grid on M4Gpu gi in 0 .. 2\n      by tile (si, sj) parts [8, 16]\n      writes y[gi * 32 .. gi * 32 + 32, 0 .. 16] as yt do\n    var o: [f32; 32, 16] = repeat (-0.0)\n    var m: [f32; 32, 1] = repeat (from_bits (4286578688 as u32))\n    var l: [f32; 32, 1] = repeat (-0.0)\n    for gj in 0 .. 4 do\n      var s: [f32; 32, 8] = repeat (-0.0)\n      for gc in 0 .. 1 do\n        let x: [f32; 32, 16] =\n          load q[gi * 32 .. gi * 32 + 32, gc * 16 .. gc * 16 + 16]\n        let k: [f32; 16, 8] =\n          load kt[gc * 16 .. gc * 16 + 16, gj * 8 .. gj * 8 + 8]\n        s = mma x k s\n      let m2: [f32; 32, 1] = max m (reduce Max f32 over cols by halving do s)\n      let e: [f32; 32, 8] = exp (s - m2)\n      let alpha: [f32; 32, 1] = rescale m m2\n      l = l * alpha + (reduce Sum f32 over cols by order do e)\n      let w: [f32; 8, 16] = load v[gj * 8 .. gj * 8 + 8, 0 .. 16]\n      o = o * alpha\n      o = mma e w o\n      m = m2\n    store yt = o / l",
+      "changed": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25
+      ],
+      "verdict": "flash: bits of flash_shadow\n  arithmetic: M4Gpu\n  trusted:\n    template `simdgroup_mma8`\nflash_shadow: equals attend over reals\n  by:\n    `Online` associative  over reals\n    `Online` block        over reals\n  trusted:\n    `Online` associative: \"(m, l, o) stands for (e^m l, e^m o), which combine adds\"\n    `Online` block: \"a block's terms, each e^(s - m2) at the block's largest score m2, add to the summary rescaled to m2 as combine adds them\"",
+      "note": "Each grid iteration handles 32 queries. `compute s at j.outer` keeps a block of scores within the SIMD groups. `reduce` combines eight keys at a time: find the new maximum, rescale the summary, then add the new terms in order. These steps are shown together because the compiler needs the final `element` choice to construct the kernel.",
+      "links": [
+        {
+          "source": 10,
+          "lines": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25
+          ]
+        },
+        {
+          "source": 11,
+          "lines": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25
+          ]
+        },
+        {
+          "source": 12,
+          "lines": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25
+          ]
+        },
+        {
+          "source": 13,
+          "lines": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25
+          ]
+        },
+        {
+          "source": 14,
+          "lines": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25
+          ]
+        },
+        {
+          "source": 15,
+          "lines": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25
+          ]
+        }
+      ]
+    }
+  ]
+}

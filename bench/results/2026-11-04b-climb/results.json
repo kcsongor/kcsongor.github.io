@@ -1,0 +1,81 @@
+[
+  {
+    "name": "packed",
+    "n": 1024,
+    "median_s": 0.045386792,
+    "min_s": 0.04401625,
+    "gflops": 47.32,
+    "reps": 23,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-climb/build/1024/packed"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "fast",
+    "n": 1024,
+    "median_s": 0.018564729,
+    "min_s": 0.018372542,
+    "gflops": 115.68,
+    "reps": 50,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-climb/build/1024/fast"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "big",
+    "n": 1024,
+    "median_s": 0.044729041,
+    "min_s": 0.041855917,
+    "gflops": 48.01,
+    "reps": 23,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-climb/build/1024/big"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "big_order",
+    "n": 1024,
+    "median_s": 0.032788417,
+    "min_s": 0.032095875,
+    "gflops": 65.5,
+    "reps": 31,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-climb/build/1024/big_order"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "openblas_neon_1",
+    "n": 1024,
+    "median_s": 0.019849937,
+    "min_s": 0.019512625,
+    "gflops": 108.19,
+    "reps": 50,
+    "check": "close",
+    "element": "f32",
+    "where": "CPU, one core",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-climb/build/1024/openblas_neon_1"
+    ],
+    "environment": {
+      "OPENBLAS_CORETYPE": "NEOVERSEN1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    }
+  }
+]

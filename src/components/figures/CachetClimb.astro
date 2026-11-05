@@ -1,0 +1,59 @@
+---
+import BenchmarkBars from "./CachetBenchmarkBars.astro";
+import snapshot from "./cachet-benchmarks.json";
+import { target } from "./cachet-performance.mjs";
+
+const { measurements } = snapshot.runs.climb;
+const goal = target("tuning");
+const baseline = goal.gflops;
+const rows = [
+  {
+    name: "packed",
+    code: true,
+    note: "Starting schedule",
+    value: measurements.packed.gflops,
+  },
+  {
+    name: "Larger blocks",
+    note: "Use more of the caches",
+    value: measurements.big.gflops,
+  },
+  {
+    name: "Rows first",
+    note: "Repack the smaller panels",
+    value: measurements.big_order.gflops,
+  },
+  {
+    name: "A wider tile",
+    note: "4 × 16 outputs · fast",
+    value: measurements.fast.gflops,
+    emphasis: true,
+  },
+  { name: "OpenBLAS", note: "NEON kernels", value: baseline, library: true },
+];
+---
+
+<div class="gpu-figure matrix-figure not-prose">
+  <figure>
+    <figcaption>What each change adds on one core</figcaption>
+    <p class="figure-intro">
+      The wider tile brings <code>fast</code> to about OpenBLAS's speed, and about{
+        ` ${(measurements.fast.gflops / measurements.packed.gflops).toFixed(1)} `
+      }times the speed of <code>packed</code>.
+    </p>
+    <BenchmarkBars
+      title={goal.hardware}
+      context={`${goal.workload} · ${goal.instructions}`}
+      rowHeading="Tuning step"
+      {rows}
+      {baseline}
+      relative
+    />
+    <p class="figure-note">
+      GFLOP/s, higher is better. The dashed line marks OpenBLAS's speed in this run.
+      Every version produces exactly the same result as <code>matmul</code>.
+      These tuning steps were measured together, in a separate run from the
+      overview below.
+    </p>
+  </figure>
+</div>

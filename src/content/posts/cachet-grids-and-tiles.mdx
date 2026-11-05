@@ -1,0 +1,1055 @@
+---
+title: "Write your own kernel optimiser"
+subtitle: "Well-scheduled kernels cannot go wrong*"
+description: "Well-scheduled kernels cannot go wrong*"
+pubDatetime: 2026-11-05T12:00:00Z
+tags: [cachet, gpu, programming-languages]
+draft: false
+inlineCodeLanguage: cachet
+---
+
+{/* Every timing is measured: master afbfbdc74; `sme`'s stages on c28cebb39
+    and the full `sme` on 6c75e764d (multi-vector loads); nothing for `flash`,
+    whose time at `attend`'s size is launch latency. Async grids (#1379) don't
+    speed `sme` up, so the post doesn't use them. */}
+
+import CachetMatmul from '../../components/figures/CachetMatmul.astro';
+import CachetMatmulSchedules from '../../components/figures/CachetMatmulSchedules.astro';
+import CachetEvaluationOrder from '../../components/figures/CachetEvaluationOrder.astro';
+import CachetCacheLines from '../../components/figures/CachetCacheLines.astro';
+import CachetBlocking from '../../components/figures/CachetBlocking.astro';
+import CachetRegisterTile from '../../components/figures/CachetRegisterTile.astro';
+import CachetMemoryHierarchy from '../../components/figures/CachetMemoryHierarchy.astro';
+import CachetWorkUnits from '../../components/figures/CachetWorkUnits.astro';
+import CachetElementLevels from '../../components/figures/CachetElementLevels.astro';
+import CachetSchedule from '@/components/figures/CachetScheduleInline.astro';
+import CachetPanels from '../../components/figures/CachetPanels.astro';
+import CachetPerformance from '../../components/figures/CachetPerformance.astro';
+import CachetLoopOrder from '../../components/figures/CachetLoopOrder.astro';
+import CachetClimb from '../../components/figures/CachetClimb.astro';
+import CachetMetric from '../../components/figures/CachetMetric.astro';
+import CachetTiming from '../../components/figures/CachetTiming.astro';
+import Panel from '../../components/figures/Panel.astro';
+import '../../components/figures/cachet-gpu.css';
+
+Optimising a program is done in one of two ways. The first is to write down a program that computes the result we want, and hope that the compiler is smart enough to make it fast.
+The second, when that isn't enough, is to rewrite it by hand, so that its data flow matches the hardware. This is where abstractions break down. When the compiler gives up on something written with a nice Python library, we end up writing custom kernels, intrinsics, and inline assembly.
+
+Both rely on transformations that preserve meaning only under conditions, such as the output not overlapping the inputs.
+Compiler optimisations let us keep our original program, but hide the transformations. Hand-optimised code shows the result of the transformations, but hides where we started from.
+
+In both cases, the decisions that matter are made somewhere we can't see: for example, which block has to stay in cache, or which loops can be vectorised.
+An optimising compiler makes these decisions based on a model of the hardware that's hidden from the source language.
+In hand-optimised code, we keep these in our head, or in comments in the source file.
+
+When performance matters, I would rather not have a clever compiler. Instead, I want the compiler to be explicit.
+That's the idea behind Cachet, a language I've been building to help reason about performance. In Cachet, which cache a buffer stays in, how much data moves between memory levels, and which instructions the hardware provides are part of the language. We can then make informed decisions, and have the compiler check our assumptions. If an assumption stops holding as the program evolves, it becomes a compile error rather than a performance regression.
+
+This post is about the transformations themselves. In Cachet, we write down _what_ to compute and, separately, _how_ to compute it. A sequence of transformations, a _schedule_, turns the computation into an optimised program. The compiler then checks that each transformation preserves the meaning of the original.[^asterisk]
+
+[^asterisk]: In some cases, such as sums of floating-point numbers, the preservation does not strictly hold. In these cases, we can tell the compiler that we're willing to treat floating-point addition as associative, which then lets us split a sum across threads.
+
+We'll use matrix multiplication as a running example. Starting from its one-line definition, we'll derive cache-blocked CPU kernels, and optimised GPU kernels using matrix hardware. I've run these examples on my laptop (with an M4 Max), but nothing in the technique is specific to Apple's hardware: Cachet already checks programs for NVIDIA's H100, though it can't build them for it yet.
+
+To see how we're doing, we'll compare each schedule with an optimised library implementation on the same hardware: OpenBLAS for the CPU's vector instructions, Apple's Accelerate for its matrix units, and MLX for the GPU. The little bars along the way show how close we get to the library's speed, with the library at 100%. Each comparison uses the same matrix size and precision.
+
+## Matrix multiplication by hand
+
+Matrix multiplication is very easy to do correctly, but notoriously difficult to do quickly. The definition fits on one line:
+
+```cachet label=""
+c[i, j] = sum k. a[i, k] * b[k, j]
+```
+
+A machine needs a little more handholding. For an M × K matrix multiplied by a K × N matrix, we can spell out the order of operations with three nested loops:
+
+```c heat="i j k"
+// c starts out as all zeroes
+for (int i = 0; i < M; i++)
+  for (int j = 0; j < N; j++)
+    for (int k = 0; k < K; k++)
+      c[i][j] += a[i][k] * b[k][j];
+```
+
+Cachet's straightforward version of this loop nest reaches just <CachetMetric run="cpu" kernel="matmul" digits={2} /> GFLOP/s[^gflops] on one core for 1024 × 1024 matrices: about <CachetMetric run="cpu" kernel="matmul" kind="percent" other="openblas_neon_1" />% of OpenBLAS's speed on the same core. There's a lot of room to improve:
+
+[^gflops]: Billions of floating-point operations per second, counting a multiply-add as two operations.
+
+<CachetTiming reference="cpu.matmul" target="one_core" label="Naive loop nest" />
+
+The colours show how often each variable changes: <code class="heat-text-cold">i</code> the least, <code class="heat-text-warm">j</code> more often, and <code class="heat-text-hot">k</code> on every multiplication. The hottest variable controls how the inner loop moves through the arrays. Here, `k` walks along a row of `a`, but down a column of `b`.
+
+The arrays are stored row by row: `b[0][0]`, `b[0][1]`, and so on, followed by the next row. This is called *row-major* order.
+The processor doesn't fetch single values. When a value isn't in its *cache* (the small, fast memory close to the core), it fetches a whole chunk of neighbouring bytes called a *cache line*. Reading those neighbours can then use the cached copy, avoiding another trip to main memory.
+
+Walking along a row uses those neighbours straight away. Walking down a column jumps a whole row at a time, and the cache may have replaced a line by the time we return to its other values. Here's a small model of the two access patterns:
+
+<CachetCacheLines />
+
+We can get the row-wise access pattern just by swapping the two inner loops:
+
+```c heat="i k j"
+// c starts out as all zeroes
+for (int i = 0; i < M; i++)
+  for (int k = 0; k < K; k++)
+    for (int j = 0; j < N; j++)
+      c[i][j] += a[i][k] * b[k][j];
+```
+
+The hottest variable is now <code class="heat-text-hot">j</code>, the last subscript of `b` and `c`, so the inner loop walks along their rows, using neighbouring values while their line is still cached. (`a[i][k]` stays the same throughout that loop.) For large matrices, this makes a big difference:
+
+<CachetLoopOrder />
+
+Swapping the loops makes the same multiplication about <CachetMetric run="cpu" kernel="swapped" kind="speedup" other="matmul" /> times faster, though it's still only <CachetMetric run="cpu" kernel="swapped" kind="percent" other="openblas_neon_1" />% of OpenBLAS's speed on one core.
+
+An astute reader might notice that we still walk through all of B for every row of A. If B is too large to stay in cache, much of it has to be fetched again on each pass. Blocking, which we'll get to [shortly](#blocking-matrix-multiplication), keeps a block of inputs in cache until we've done as much work with it as possible.
+
+Swapping loops doesn't preserve a program's meaning in general, though. Here, provided `c` doesn't overlap either input, different values of `j` update different outputs. Each output still receives the same products in ascending order of `k`; we've only changed how updates to different outputs are interleaved. These conditions aren't written down, and a fast kernel has many such rewrites stacked on top of each other.
+
+We'd like the compiler to check these conditions for us.
+
+## Say what (not how)
+
+Loops make this harder than it needs to be. They commit us to visiting the outputs in a particular sequence, even though each output can be computed independently. Before changing that sequence, we have to establish which parts of the order matter, which is busywork for either the programmer or the compiler. Finding constructs that describe the computation itself, and still map well to the hardware, is a language design problem.[^hammer]
+
+[^hammer]: When all you have is a hammer...
+
+We can now write the definition as a Cachet function, starting with ordinary 32-bit floats:
+
+```cachet
+contraction matmul
+    (reads a: [f32; M, K])
+    (reads b: [f32; K, N])
+    -> out c: [f32; M, N] =
+  c[i, j] = sum k. a[i, k] * b[k, j]
+```
+
+This is a *contraction*: a function defined by an equation for each output element. The body is the formula we started with. `[f32; M, K]` is an array with `M` rows and `K` columns, and `reads` lets the function read it. `-> out c` names the result: the caller provides space for `c`, and `matmul` fills it.
+
+`M`, `K`, and `N` are the dimensions. The equation tells us which outputs are independent, which inputs to add up, and which operations to use:
+
+- `i` and `j` appear on the left, so they are *free*: each pair names one element of `c`, which is written exactly once. Different pairs compute independent outputs.
+- `k` only appears under the `sum`, so it's *summed*: for each output, we multiply the pairs of inputs it selects and add up the products.
+- `*` and `+` come from the element type. Here that's `f32`, but we'll see later that the same formula works when an element is a block (another matrix).
+
+Since the free indices say nothing about order, the outputs can be computed in any order, or all at once. The summed index is different. A plain `sum` keeps its order: each output accumulates its products in ascending order of `k`, however the outputs themselves are interleaved.
+
+### Rewriting the loop nest
+
+A contraction has a precise meaning as a loop nest. You can ask Cachet's compiler, `cachetc`, to print it with `cachetc scheduled`.[^loop-listings]
+
+A *schedule* is a sequence of rewrites that turns this loop nest into another function. The compiler applies the rewrites once, when it builds the program. Calling the resulting function just runs the kernel.
+
+The swap we already know comes first. The schedule is above the loop body it produces. Use Previous and Next to follow the rewrites; the current step is highlighted. `...` leaves out code that isn't relevant to the step:
+
+<CachetSchedule name="swap" initialStage={0} />
+
+In the starting loop nest, `load` reads a value and `store` writes one. The running total, `acc'0`, starts from zero, written `-0.0` for a reason the [semiring panel](#panel-semiring) explains, and is stored once at the end. Each step uses a [fused multiply-add](#panel-fma): `fma a b acc` computes `a * b + acc` with a single rounding, rather than rounding the product separately.
+
+This is the behaviour a schedule must preserve: each output receives the same chain of multiply-adds, in ascending order of `k`.
+
+There's a small problem with swapping the loops as they are. Each output keeps its running total in a local variable, which is stored once at the end. After the swap, we'd leave that output to work on the next one, then return to it at the next value of `k`. Its total has to survive between visits.
+
+The first step, `zero (i, j) c`, prepares for this. It writes zero to every element of `c` first, in a loop of its own, and then has each output's sum start from what its cell holds. The listing shows this sum as updates to the cell: you can read it as load the total, add a product, store it back. Each total still starts from zero and receives the same products in the same order.
+
+Now `hoist (j, k) c` moves the steps of the sum outside the loop over `j`. Each visit loads a cell's total, adds the next product, and stores it back.
+
+After both steps, the line at the bottom summarises the schedule's [*claim*](#panel-claim): what the compiler has checked. Here, `swapped` and `matmul`'s own loop nest produce identical results, bit for bit, for any inputs that satisfy the function's requirements. The resulting function takes the same arrays as `matmul`, so we call it as `swapped a b c`.
+
+The `hoist` we used for `matmul` is a *step function* from the `cachet:steps` library: a rewrite with a proof recipe. Its [definition](#panel-hoist) gives a piece of program to match, its replacement, and instructions for checking that the result is preserved. Every time we use the step, the checker has to establish this for the actual program we're rewriting.
+
+Most other steps are defined in `cachet:steps` in the same way. A few layout steps, such as `split` and `order`, are built into the compiler.
+
+[^loop-listings]: The listings are shortened for readability. `cachetc scheduled` prints each sum as a `fold`, an expression that carries a running total; this post writes it as a loop. When the fold starts from its output cell, we show the equivalent updates to that cell, as the checker sees them. These are explanatory listings, not the final machine code. The compiler also prints `-> out c` as the parameter `(mut c: …)` with `produces Init c`, which this post writes as `-> out c`.
+
+## Blocking matrix multiplication
+
+We now return to our astute reader's observation: we keep fetching the same inputs for different outputs. Blocking lets us keep a block in cache while computing several outputs from it.
+
+The inner kernel alone can take hundreds of lines: [BLIS](https://github.com/flame/blis)'s [double-precision kernel for Haswell](https://github.com/flame/blis/blob/a8037cfc4330030c726efaec1ffeb1f93d468aa3/kernels/haswell/3/bli_gemm_haswell_asm_d6x8.c#L939-L1656) runs to about 720. Much of that code deals with registers and instructions. The code around the kernel divides the work into blocks, hands it out to threads, and organises memory access around the cache hierarchy of one particular machine.
+
+The [structure of matrix multiplication](#panel-matmul) gives us several ways to divide up that work. We'll start with the CPU: blocking, packing the inputs, and tuning the kernel. Then we'll build GPU schedules from the same contraction.
+
+### Working through a sum in chunks
+
+Each output has a sum to work through. We can cut it into consecutive pieces, provided the running total carries on from one piece to the next. Here are the first two steps of `tower`, a CPU schedule we'll build up later:
+
+```cachet label="First two steps"
+schedule tower of matmul =
+  zero (i, j) c
+  split k by 16 as gk ragged
+```
+
+<CachetTiming schedule="tower" step={2} />
+
+`zero` prepares the output cells as before. `split` divides the sum over `k` into chunks of at most 16 products. It names the chunk `gk`, and `k` now counts the position within it. The part that updates one output has this shape:
+
+```cachet label="Loop body for one output"
+for gk in blocks (0 .. K) 16 do
+  for k in 0 .. gk.len do
+    let acc = load c[i, j]
+    store c[i, j] = fma (load a[i, gk[k]]) (load b[gk[k], j]) acc
+```
+
+`gk.len` is the chunk's length, and `gk[k]` is the corresponding index in the original sum. At `K = 40`, the chunks cover `k = 0` through `15`, then `16` through `31`, then `32` through `39`. (`ragged` means the last chunk can be shorter.) The cell isn't reset between chunks: it carries the same running total through the same products in the same order.
+
+Giving each chunk a separate total and combining those totals afterwards would be a different transformation. It would let us compute the chunks independently, but it would regroup the additions. Over the reals that makes no difference (since addition is associative), but in floating point, each addition rounds, so the answer can change. A plain `sum` doesn't allow that. We'll use a contraction that gives permission to regroup when we get to [attention](#attention).
+
+Chunking lets us work through each output's sum in pieces. To reuse inputs across neighbouring outputs, we need to work on several outputs together.
+
+### Reusing inputs across outputs
+
+Two 8 × 8 matrices make the pattern visible. Grouping their entries into 4 × 4 blocks gives us a 2 × 2 matrix of matrices. The lower multiplication follows the same pattern as the ordinary 2 × 2 multiplication above it, except that each entry is now a block.
+
+<CachetBlocking />
+
+For example, the upper-left output block is `A[0, 0] × B[0, 0] + A[0, 1] × B[1, 0]`, where the indices now select whole blocks. Each `×` is a matrix multiplication: every row of the A block is multiplied by every column of the B block.
+
+We can follow that one output block. We keep 16 running totals, initially zero. The first pair of input blocks supplies the products for `k = 0, 1, 2, 3`. We update all 16 totals, then replace the inputs with the second pair, for `k = 4, 5, 6, 7`. The totals stay where they are. Only after both pairs have contributed do we store the finished output block.
+
+To compute one output independently, we read eight values from A and eight from B. Repeating that for all 16 outputs takes 256 input loads. Working on the block, we load 16 values from A and 16 from B, keep them while updating all 16 outputs, then do the same with the next pair: 64 input loads. Each A value contributes to four output columns, and each B value contributes to four output rows.
+
+Reusing the inputs this way leaves the arithmetic unchanged. Drawing block boundaries alone doesn't achieve this: we have to [keep the values nearby](#panel-blocking) while updating the outputs. These counts describe the algorithm's loads, not transfers from main memory; caches may satisfy some of the loads in either version.
+
+The figure's **Keep them in cache** view follows a few products from the next row of C. With whole rows, the walk through B has evicted the lines we need again. With blocks, those lines are still there. (The cache is deliberately tiny, so we can see everything it contains.) The loop swap improved reuse within a row; blocking lets us reuse the same inputs across several rows as well.
+
+The blocked multiplication is the same formula as before, applied to a 2 × 2 matrix whose elements are 4 × 4 blocks. The `+` and `×` it uses are matrix addition and multiplication. That's the trick: tiling is matrix multiplication at a different element type. (We can do this more than once, which is convenient when the machine has more than one level of cache.)
+
+## Scheduling for the CPU
+
+We'll want both 32-bit and 64-bit CPU versions, but the loop swap didn't use any property of `f32`. Instead of writing the contraction again for `f64`, we can make its element type and operations a parameter:
+
+```cachet
+contraction matmul {S : Semiring}
+    (reads a: [S.Value; M, K])
+    (reads b: [S.Value; K, N])
+    -> out c: [S.Value; M, N] =
+  c[i, j] = sum k. a[i, k] * b[k, j]
+```
+
+`S` supplies the element type `S.Value`, the operations, and their laws. This interface is called a [*semiring*](#panel-semiring). `PlusTimes f32` supplies ordinary floating-point arithmetic, with `fma` for its `mul_add`, so `matmul @(S = PlusTimes f32)` is the computation we've used so far. We'll use this generic definition for the rest of the post.
+
+`tower`, the CPU schedule whose first two steps split each sum into chunks, continues from there. The next two steps cut the rows and columns into blocks too, and `order` then moves the loop over chunks outside the output loops. We now take one block of the depth `k` and visit all the outputs it contributes to, giving us a chance to reuse blocks of A and B while they're still in cache. This schedule still runs on one CPU core. The figure follows it into `packed`, which adds packing and register storage:
+
+<CachetSchedule name="tower" initialStage={2} />
+
+Each cell's running total still carries on from one depth block to the next, so no addition is regrouped. Each step has to prove that it preserves the result, for every size of matrix. It doesn't need to know how `S` implements its operations: before and after the rewrite, each output applies the same operations to the same values in the same order. So `tower` works for any `S`.
+
+`tower` is actually slower than `swapped`. Splitting the loops into blocks hasn't given us a fast inner kernel yet.
+
+The first `pack` step in the figure starts a new schedule, `packed`, which continues where `tower` left off. Two `pack` steps copy blocks of A and B into temporary buffers, arranging the values for the kernel to read. These buffers become parameters of `packed`, and two `keep` steps say which cache each buffer should stay in.
+
+The last step, `registers (i, j) into c rows 4 lanes 8 through fma`, holds a 4 × 8 block of C in vector registers across the depth loop. A vector instruction operates on several values at once; here, its multiply-add updates four `f32` values. This ties the schedule to the machine's vector registers, so we bind `S` to `PlusTimes f32`.
+
+The figure writes out every step, but `tower` and `packed` share their first five. We can give those steps a name with `schedule fn`, and make the block sizes parameters:
+
+```cachet
+schedule fn block_product (i, j, k) c (MC, MR, NC, KC) =
+  zero (i, j) c
+  split k by KC as gk ragged
+  split i by MC as gi, MR as ui ragged
+  split j by NC as gj ragged
+  order (gk, gj, gi, ui, i, j)
+
+schedule tower of matmul =
+  block_product (i, j, k) c (16, 4, 8, 16)
+
+schedule packed of matmul @(S = PlusTimes f32)
+    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)
+    (mut packB: [f32; 16, 8] at DRAM) =
+  block_product (i, j, k) c (16, 4, 8, 16)
+  pack a into packA along gi over (a0, a1)
+  keep packA along gi within L2 into packA_L2
+  pack b into packB along gj over (b0, b1)
+  keep packB along gj within L1 into packB_L1
+  registers (i, j) into c rows 4 lanes 8 through fma
+```
+
+`(i, j, k) c` names the indices and output to rewrite, as in `hoist`. `MC` and `MR` choose the outer and inner row block sizes, `NC` the column block size, and `KC` the depth. Both schedules pass the same sizes; `packed` then adds the steps below the call.
+
+The call to `block_product` expands into its steps when the compiler reads the schedule. The following steps can keep working on the loops it produces: `pack` copies their inputs, `keep` records their cache requirements, and `registers` holds their running totals in registers. There's no function call left in the kernel.
+
+Schedule functions can call other schedule functions too, so we can build up an optimisation from smaller ones. Each rewrite is checked against the program left by the preceding steps, including those from a helper. The checks compose along with the transformations: if every step preserves the result under its stated conditions, the whole sequence does too.
+
+`PanelMajor 4` lays out A in groups of four rows, putting the four values from each column in consecutive memory. The inner kernel reads four values at each depth step, and this layout keeps them together. B's buffer keeps the ordinary row-major layout, so its eight values from that step are contiguous too. We still write `packA[i, k]`; only the address it refers to changes.
+
+The scratch buffers live in main memory (`DRAM`); `keep` names the cache views the kernel will read. The cache requirements appear in the generated function's declaration:
+
+```cachet
+scratch packA, packB
+working_set
+  @L1 { keep packB = descriptor packB }
+  @L2 { keep packA = descriptor packA }
+```
+
+`scratch` requires the kernel to write to each buffer location before reading it. The caller therefore doesn't need to clear the buffers first. The `working_set` rows say which buffer stays in which cache, and a caller of `packed` has to show that they fit. The [memory hierarchy panel](#panel-blocking) shows where the buffers live. The block sizes are deliberately small here.
+
+## Making it fast
+
+{/* Numbers from bench/results/2026-11-04b-climb, at Cachet afbfbdc74: `packed`,
+    the two tuning steps (written as schedules beside the example) and
+    `fast`, with OpenBLAS on one core. Update with CachetClimb. */}
+
+`packed` multiplies two 1024 × 1024 matrices at <CachetMetric run="climb" kernel="packed" /> GFLOP/s. OpenBLAS reaches <CachetMetric run="climb" kernel="openblas_neon_1" /> on the same core with the same vector instructions.
+
+### How much data are we moving?
+
+Copying the inputs is extra work. We expect it to pay off because the kernel can then read them repeatedly from cache, without going back to main memory. But how much copying have we actually asked for?
+
+The compiler keeps an account of what each function does, and `cachetc account` prints it, one operation at a time. Here is `packed`'s, shortened:
+
+{/* Real output of `cachetc account --function packed` on master afbfbdc74, with the
+    site columns, predicted times, `call empty` and `call tile` rows, flows and
+    the chain left out. */}
+
+```text
+packed
+  operations
+    loop  host  x 1
+      writes c 4 * M * N
+    loop  host  x ceil (K / 16) * ceil (N / 8)
+      reads b 512; writes packB 512
+    loop  host  x ceil (K / 16) * ceil (M / 16) * ceil (N / 8)
+      reads a 1024; writes packA 1024
+    loop  host  x ceil (K / 16) * ceil (M / 16) * ceil (N / 8)
+      reads c 512, packA_L2 1024, packB_L1 2048; writes c 512; work fma 2048, ...
+```
+
+The number after each `x` says how many times that operation runs. The first row zeroes `c`, all `4 * M * N` bytes of it. The next two copy a 16 × 8 block of B and a 16 × 16 block of A into their buffers. `reads` and `writes` count bytes; `work fma` counts multiply-adds.
+
+The last row is the computation on one block: it reads packed A from L2 and packed B from L1, then performs 2,048 multiply-adds. The repetition counts use M, N and K, so we can see how the work grows with the matrices.
+
+The generated function also declares bounds on this traffic, next to the `working_set` we saw above. These rows count the cache lines moved by each pack:
+
+```cachet
+movement
+  traffic packB_pull = ceil (K / 16) * ceil (N / 8) *
+    lines (span_bytes packB.span) from DRAM to L1 and back
+  traffic packA_pull = ceil (K / 16) * ceil (N / 8) * ceil (M / 16) *
+    lines (span_bytes packA.span) from DRAM to L2 and back
+```
+
+A caller can put a limit on this traffic too. For two 32 × 32 matrices, the loop order above packs A once for each combination of a depth block, a column block and a row block: 2 × 4 × 2 = 16 packs. If the caller allows only eight, the call is refused. We have to change the schedule or allow the extra traffic. The [full example and refusal](#panel-traffic-budget) show how the caller writes this budget.
+
+The account is exact within the platform file's model of the caches, but it knows nothing about prefetchers, replacement policies, or another process sharing the cache. Whether reducing these counts makes the kernel faster still has to be measured.
+
+### Tuning the kernel
+
+Our blocks are small enough to read, but far smaller than the caches they're kept in. The obvious next step is to make them larger:
+
+<CachetSchedule name="fast" initialStage={0} />
+
+The first step, **Larger blocks**, mostly changes sizes. The blocks of A are now 512 rows by 256 columns, half a megabyte, kept in L2, and the blocks of B are 256 by 8, kept in L1. These tall rectangular blocks are often called *panels*. Surprisingly, it's barely faster: <CachetMetric run="climb" kernel="big" /> GFLOP/s. (The correctness proof is perfectly happy with this.)
+
+The traffic account shows a lot of repeated copying. The factor `ceil (N / 8)` in A's traffic row comes from `gj`, which is still outside `gi`: we pack each panel of A again for every panel of B. At 1024 × 1024, that's 1,024 copies of half a megabyte for one multiplication. A [traffic contract](#panel-traffic-budget) written for these sizes can refuse this order.
+
+**Rows first** puts `gi` before `gj` in the `order`, so the rows are outside the columns, and the factor `ceil (N / 8)` moves to B's row, whose panels are 64 times smaller. That gets us to <CachetMetric run="climb" kernel="big_order" /> GFLOP/s.
+
+That's still only about <CachetMetric run="climb" kernel="big_order" kind="percent" other="openblas_neon_1" />% of OpenBLAS. Another problem is that we're waiting for our own results. A vector `fma` on the M4 Max takes four cycles before its result can be used by the next `fma` in the same chain. The core can start four independent vector `fma`s per cycle, so it needs 16 independent chains to keep doing that while earlier results are on their way.
+
+Each vector holds four `f32` values, so our 4 × 8 tile occupies only eight vectors. After updating those eight, we have to wait before we can update them again. Widening the tile gives the core more independent totals to work on in the meantime:
+
+<CachetRegisterTile />
+
+The platform file gives the number of values per vector as `lanes`, the number of `fma`s it can start per cycle as `fma_pipes`, and the delay before using a result as `fma_latency`. We can use them to write a requirement next to the schedule, whose last step becomes `registers (i, j) into c rows MR lanes NR through fma`:
+
+```cachet
+const MR : Nat = 4
+const NR : Nat = 8
+
+proof enough_chains =
+  assert MR * ceil (NR / platform.lanes @Vec @f32) >=
+    platform.fma_pipes @Vec * platform.fma_latency @Vec
+```
+
+With a 4 × 8 tile, it's refused:
+
+```text
+could not prove proof enough_chains: MR * ceil (NR / platform.lanes Vec f32) >= platform.fma_pipes @Vec * platform.fma_latency @Vec
+```
+
+A reader who has been counting independent chains will already know what to try: `NR = 16`. Each of the four rows now occupies four vectors, giving us sixteen independent chains, and the proof goes through. `fast` now runs at <CachetMetric run="climb" kernel="fast" /> GFLOP/s, as fast as OpenBLAS:
+
+<CachetClimb />
+
+`fast` still produces exactly the same result as `matmul`. If someone later narrows the tile to save registers, the `enough_chains` check fails, pointing out the dependency we'd reintroduce. This check relies on the platform file's numbers: Apple doesn't publish the latency or throughput, so the file uses published measurements.
+
+We could also have asked Cachet to find that width. With `MR` still fixed at four, we can replace `const NR : Nat = 16` with:
+
+```cachet
+synth const NR : Nat =
+  minimize n in (n): n where
+    n > 0, n <= 64,
+    n % platform.lanes @Vec @f32 == 0,
+    MR * ceil (n / platform.lanes @Vec @f32) >=
+      platform.fma_pipes @Vec * platform.fma_latency @Vec
+```
+
+This asks for the smallest width from 1 to 64 that fills whole vectors and supplies enough independent chains. For the platform above, that is 16. So the condition that refused our 4 × 8 tile can also pick the width for us. `synth const` chooses the number at compile time, and the rest of the schedule is checked with that number in place, just as if we'd written it ourselves.
+
+Several parameters can be chosen together too, and the candidates ranked by a cost expression, such as the estimated load cost per multiply-add. We'd still benchmark the promising candidates: a low cost in the model needn't mean a short running time.
+
+### Using the other cores
+
+We now have a fast kernel for one core. To use the other cores, we can divide the output rows between them. In `bands`, `parallel gi` turns the loop over blocks of 64 rows into a *grid* of independent iterations. It runs on the host, so CPU threads take the bands of rows.
+
+Each iteration has a *write window*: the part of the output it's allowed to update. The compiler infers this from the rows it stores, and checks that the windows don't overlap. Threads can read the same inputs, but can't write each other's outputs.
+
+`parallel` is a library step too, and it's short enough to show in full:
+
+```cachet
+step fn parallel t =
+  from
+    for t in $lo .. $hi do
+      $body
+  to
+    grid t in $lo .. $hi do
+      $body
+```
+
+There's no `relate` proof recipe this time. The grid it produces has to prove its windows don't overlap anyway.
+
+The threads share the packed inputs: A is packed once per block of depth, for every row, and B is packed in groups of 16 columns and kept in L2:
+
+```cachet
+schedule bands of matmul @(S = PlusTimes f32)
+    (mut packA: [f32; M, 256] in PanelMajor 4)
+    (mut packB: [f32; 256, 1024] in ColumnPanels 16 at DRAM) =
+  zero (i, j) c
+
+  // Block and reorder the loops.
+  split k by 256 as gk ragged
+  split j by 1024 as gj, 16 as uj ragged
+  split i by 64 as gi, 4 as ui
+  order (gk, gj, gi, ui, uj, i, j)
+
+  // Give each CPU thread a band of output rows.
+  parallel gi
+
+  // Pack the inputs for reuse across the output bands.
+  pack a into packA along gk over (a0, a1)
+  strip a0 4 (pa, ra)
+  interchange (ra, a1)
+  parallel pa
+
+  pack_lanes b into packB along gj over (b0, b1, bt) lanes 16
+  keep packB along gj within L2 into packB_L2
+  parallel b0
+
+  // Accumulate a 4 × 16 output block in vector registers.
+  registers (i, j) into c rows 4 lanes 16 through fma
+```
+
+<CachetTiming reference="cpu.bands" target="all_cores" />
+
+The packing loops are parallel too. `strip a0 4 (pa, ra)` divides A's rows into groups of four, with `pa` selecting a group and `ra` a row within it. `interchange (ra, a1)` moves the column loop outside those four rows, so the copy writes neighbouring values in `PanelMajor 4` order. `parallel pa` lets separate threads pack separate groups.
+
+For B, `ColumnPanels 16` stores groups of 16 columns, with each group's rows one after another. `pack_lanes` copies 16 values at a time into that layout, and `parallel b0` distributes the rows. On NEON, 16 `f32` values fit in four vectors.
+
+On all cores, `bands` reaches <CachetMetric run="cpu" kernel="bands" /> GFLOP/s, where OpenBLAS reaches <CachetMetric run="cpu" kernel="openblas_neon" />. No sum is split between threads, only rows, so the result is still identical to `matmul`'s.
+
+### CPU matrix units
+
+`fast` and `bands` use NEON, the CPU's vector instructions. The M4 also has a [matrix unit](#panel-matrix-units), accessed through SME, Arm's Scalable Matrix Extension. We can use it for `f64` by choosing another multiply-add, `outer_fma_primitive`, which updates 8 × 8 blocks with *outer products*. An outer product multiplies each of eight values from A by each of eight values from B, contributing one product to each of the block's 64 totals. `sme` holds a 32 × 16 tile of C as eight such blocks, and lays out the rest of the work for the M4 Max's two matrix units, one in each cluster of performance cores:
+
+<CachetSchedule name="sme" />
+
+Like `bands`, `sme` divides the rows into bands, but uses larger blocks. Each band of 1536 rows runs on a thread of its own, so at 3072 × 3072 each matrix unit works on one band. Packing the inputs is just copying, so that work can still run across all the cores.
+
+Within a band, the `order` in step 4 visits the tiles along C's rows. We work across the same 32 rows before moving down to the next 32, keeping the accesses to C on the same memory pages. Visiting the tiles down the columns would start every tile on 32 new rows.
+
+At this matrix size, one depth block covers the whole sum: 3072 steps. Each tile's running totals can stay in the matrix unit until the sum is finished, and we store the result once. With blocks of 768, we'd write each output tile four times, reading it back between blocks. Those extra transfers cost about a tenth of the running time.
+
+There's also no `zero` step here. The first depth block starts the running totals at `-0.0` in the matrix unit, so we don't need to clear C and then read it back. At this size, C is only ever written. Two library steps and a few new checker rules make this possible while keeping the result identical to `matmul`'s.
+
+For each step along the depth, we load a column of A and a row of B once, using SME2's multi-vector load instructions. All eight 8 × 8 blocks then reuse those values.
+
+For the checker, `outer_fma_primitive` is a scalar `fma` on each active cell of the accumulator. Here the LLVM backend selects the matrix instructions. We rely on the compiler and hardware to implement the operation correctly, without supplying a template of our own.
+
+On 3072 × 3072 matrices of `f64`, `sme` reaches <CachetMetric run="sme" kernel="sme" /> GFLOP/s, slightly faster than Accelerate, Apple's BLAS, at <CachetMetric run="sme" kernel="accelerate_f64" /> on the same matrix units. Like `bands`, it splits no sums between threads, so it produces the same result as `matmul`.
+
+## Scheduling for the GPU
+
+The GPU schedules start again from `matmul`. The examples below bind `S` to `PlusTimes f32`, and their performance bars compare with MLX on 4096 × 4096 matrices.
+
+### Independent outputs
+
+We gave CPU threads separate bands of output rows. On the GPU, the unit of work is one output element.
+
+A GPU runs the same small program, called a *kernel*, many times. Each invocation is a *thread*, and its indices tell it which piece of work to do. Thread `(i, j)` computes `c[i, j]`: it reads row `i` of A and column `j` of B and keeps one running total. The GPU assigns threads to hardware as space becomes available; they needn't all run at once.
+
+We use a grid again, this time on the GPU:
+
+<CachetSchedule name="rows" />
+
+`grid over (i, j)` gives each pair of indices its own grid iteration. In this schedule, each iteration runs as one GPU thread. `on M4Gpu` selects the device, from the description of the target machine named at the top of the file. We call the resulting function with `rows a b c`.
+
+A grid is an ordinary Cachet construct, so we could have written `rows` by hand, and it would have been checked in the same way. In particular, the grid's header says what each iteration may write:
+
+```cachet
+grid on M4Gpu i in 0 .. M, j in 0 .. N writes c[i, j] as ct do
+```
+
+`writes c[i, j]` gives the iteration's write window, referred to as `ct` in the grid's body. Cachet checks that different iterations' windows [don't overlap](#panel-races), and that each iteration writes only within its own.[^host] For example, suppose we wrote this grid by hand for 32 × 32 matrices, but stored each result one column to the right, into `c[i, (j + 1) % 32]`. The checker would find a thread that writes outside its window:
+
+```text
+could not prove a grid iteration reaches only its own window: i == i && (j + 1) % 32 == j
+  counterexample: j = 0
+```
+
+[^host]: A grid without `on` runs on the host. A built executable runs its outermost loop on several threads, while Cachet's interpreter runs the iterations in order. Since no iteration can observe another's effects, both produce identical results.
+
+`rows` performs the same multiply-adds in the same order as `matmul`, but it runs them on the GPU. A GPU may handle some floating-point values differently from the CPU. The M4 Max's GPU, for example, flushes *subnormals* (very small numbers near zero) to zero. The guarantee is therefore that `rows` produces exactly the same result as `matmul` evaluated using that GPU's arithmetic.
+
+The grid layout is currently a built-in step. Its side conditions are checked, but its rewrite law is [part of the compiler we trust](#panel-wrong).
+
+### Tiles
+
+`rows` gives each grid iteration one output number. We can give it a whole output tile instead, with several threads cooperating on it. In Cachet, that tile is an ordinary local matrix value: an accumulator, or a block loaded from an input. The grid divides the independent work; the tiles hold the values each iteration works with.
+
+The illustration uses 32 × 32 matrices, with 16 × 16 output tiles, advancing eight steps along `k` at a time.
+
+The M4's GPU executes threads in groups of 32, called [*SIMD groups*](#panel-simd). A group can collectively perform an 8 × 8 matrix operation. Our 16 × 16 output tile has four 8 × 8 parts, so we'll give each part to one SIMD group. Those four groups make up a *threadgroup*, which cooperates on one tile. Separate threadgroups compute the four independent output tiles:
+
+<CachetWorkUnits />
+
+Here's the schedule:
+
+<CachetSchedule name="tiled" />
+
+`grid over (i, j)` starts with the independent outputs, as in `rows`. The `tiles` step groups them into 16 × 16 tiles and gives each SIMD group an 8 × 8 part. These parts don't overlap, so each output still has one owner.
+
+For `k`, `tiles` keeps the same running total across chunks, just as `tower` does. The GPU matrix instruction we use is called `simdgroup_mma8`. Its reference body adds each block's eight products in ascending order of `k`, so each output receives the same chain of multiply-adds, now eight at a time.
+
+`t` holds the output tile's running totals, starting from zero, and `x` and `y` are the next pair of input blocks. `mma x y t` is *matrix multiply-accumulate*: multiply the two input blocks and add their product to `t`. The totals stay in `t` throughout the depth loop, and are stored at the end.
+
+In effect, `tiles` makes each element an 8 × 8 matrix, with `simdgroup_mma8` as its multiply-add. It's still our `matmul`, just at a different element type. Select a level to see one element of its type:
+
+<CachetElementLevels />
+
+Inputs are now reused within each SIMD group. Different groups still load their inputs separately; to share those loads too, we'd need *threadgroup memory*, a small memory that all the groups in a threadgroup can access. We could also give each group more outputs to work on. That would reuse each input more times, but would need room for more running totals. We'll try larger tiles next.
+
+The compiler reasons about a reference implementation of the matrix multiply-add and uses a code template to replace it with a GPU instruction. We [test that instruction against the reference](#panel-matrix-instruction), but don't prove that they always produce identical results, so the template remains a trusted assumption.
+
+`tiles` itself is a library step: its relation is checked in the same way as `hoist`'s.
+
+### Larger tiles
+
+`tiled` gives each SIMD group only one 8 × 8 block of the accumulator. We can give it more outputs, so that each input is reused more times. With 64 × 32 output tiles and 32 × 16 parts, each SIMD group holds eight accumulator blocks:
+
+```cachet
+schedule big_tiles of matmul @(S = PlusTimes f32) on M4Gpu =
+  grid over (i, j)
+  tiles (i, j, k) (64, 32) (32, 16)
+```
+
+<CachetTiming reference="gpu.big_tiles" target="gpu" />
+
+At 4096 × 4096, `big_tiles` reaches <CachetMetric run="gpu" kernel="big_tiles" /> GFLOP/s: about <CachetMetric run="gpu" kernel="big_tiles" kind="speedup" other="tiled" digits={1} /> times `tiled`'s speed, and <CachetMetric run="gpu" kernel="big_tiles" kind="percent" other="mlx" />% of MLX's. The result is still identical to `tiled`'s.
+
+## Comparing the results
+
+We've now implemented the same `matmul` using four different multiply-add operations: scalar `fma`, vector `fma`, the CPU's `outer_fma_primitive`, and the GPU's `simdgroup_mma8`. In each case, the schedule chooses a block of the output to update at once, and the instruction that updates it.
+
+Here are all the matrix multiplication schedules together, grouped by the hardware they use. Each group compares Cachet with a library on the same matrix size and precision:
+
+<CachetPerformance />
+
+For these sizes, `fast` is about level with OpenBLAS on one core, and `sme` is slightly faster than Accelerate. `bands` reaches <CachetMetric run="cpu" kernel="bands" kind="percent" other="openblas_neon" />% of OpenBLAS's speed across all cores, and `big_tiles` reaches <CachetMetric run="gpu" kernel="big_tiles" kind="percent" other="mlx" />% of MLX's on the GPU. Each kernel must produce exactly the same result as `matmul` using its target device's arithmetic. The libraries don't promise this; we checked each kernel against its reference before timing it.
+
+## Attention
+
+So far, every schedule has kept the original order of additions. Attention gives us a reason to relax that requirement.
+
+Attention lets each position in a sequence mix information from other positions, giving more weight to the ones relevant to it. Each position has a *query* to compare with the others' *keys*; the resulting weights say how much of each *value* to include. The Transformer in [Attention Is All You Need](https://arxiv.org/html/1706.03762v7#S3.SS2.SSS1) writes this as:
+
+<p className="attention-equation" role="math" aria-label="Attention of Q, K, V equals softmax of Q times K transpose divided by the square root of d k, times V">
+  Attention(<i>Q</i>, <i>K</i>, <i>V</i>) = softmax(<i>QK</i><sup>T</sup> / √<i>d</i><sub>k</sub>)<i>V</i>
+</p>
+
+There are two matrix multiplications, with a softmax between them. The first computes scores; softmax turns each row into weights that add up to one; the second mixes the values. We divide the scores by the square root of the query width, <i>d</i><sub>k</sub>. We'll leave that scale factor out of the example below.
+
+Here it is as a contraction. `q` holds the queries, `kt` the transposed keys, and `v` the values. `Online` is a library implementation of the weighted sum, which we'll unpack in a moment:
+
+```cachet
+contraction attend
+    (reads q: [f32; 64, 16])
+    (reads kt: [f32; 16, 32])
+    (reads v: [f32; 32, 16])
+    -> out y: [f32; 64, 16] =
+  s[i, j] = sum c. q[i, c] * kt[c, j]
+  y[i, d] = normalised (reduce[reassoc] Online j. key (s[i, j]) (v[j, d]))
+```
+
+The score matrix has one entry for every query–key pair. For self-attention, doubling the sequence length quadruples that matrix. Avoiding the cost of storing and rereading it is the motivation behind [FlashAttention](https://arxiv.org/abs/2205.14135).
+
+We'd like to compute a block of scores, use it, and discard it. Softmax makes this awkward: it exponentiates each score and divides by the sum of all the exponentials in the row, including scores we haven't computed yet. To prevent overflow, it also subtracts the row's largest score before exponentiating. We don't know that maximum yet either.
+
+`Online` keeps a running summary that can be rescaled when a larger score arrives. `key s v` creates a summary for one key, and `reduce[reassoc] Online j.` combines these summaries over `j`, much as `sum` combines numbers. The summary keeps the total weight and the weighted sum of values. At the end, `normalised` divides the weighted sum by the total weight. The [side panel](#panel-online-attention) shows the implementation. The `[reassoc]` annotation is permission to regroup the reduction.
+
+The contraction combines keys one at a time. The schedule will instead find the maximum across the old summary and a whole block of scores, rescale the summary once, then add the block's contributions. Rescaling both the sum of weights and the weighted sum of values by the same factor leaves their ratio unchanged over the reals.
+
+Combining a block at a time regroups the reduction, so it can change the answer in floating point. Here are six `f32` values, added one at a time on the left, and in pairs on the right:
+
+<CachetEvaluationOrder />
+
+Both expressions equal one over the reals. In `f32`, adding one to minus 2²⁵ rounds back to minus 2²⁵, so the paired version loses the one and returns zero. Neither order is more accurate in general: with other values, the chain could just as well be the one that loses precision. But they're different, so Cachet only regroups a reduction that the contraction allows to be regrouped. That's what `[reassoc]` in `attend` is for: it [permits a different rounding](#panel-reproducible). Without it, the schedule below is refused:
+
+```text
+a fused block of `j` combines a block's keys at once, regrouping the reduction, which it permits with `[reassoc]`, `reduce[reassoc] Online j.`
+```
+
+With that permission, we can use a library law that combines a whole block of keys with the running summary. The tile operations do the rest: they can find a maximum or sum along a row, exponentiate each score, and use the resulting weights in another matrix multiplication. The scores stay local throughout, so we never need to write out the full score matrix. As with [a ReLU after a product](#panel-epilogue), the contraction's intermediate values only get buffers of their own if the schedule asks for them.
+
+We'll call the scheduled version `flash`. Because we've allowed it to change the rounding, we can no longer require it to produce exactly the same result as `attend`. We need a reference that follows the new reduction order. Cachet constructs this *shadow* by applying only the order-changing steps to the contraction, leaving plain loops with no grids, tiles or threads. `flash` must produce exactly the same result as this reference, which appears as `flash_shadow` in the claim:
+
+<CachetSchedule name="flash" />
+
+I've left out the timing bar here. With only 64 queries and 32 keys, each of width 16, GPU launch overhead dominates, so this example is too small for a useful comparison of the schedules' speed.
+
+`cachetc scheduled --shadow` prints the reference loops. Here they are, shortened. `m` is the largest score seen so far, `l` is the sum of weights rescaled to that maximum, and `o` is the corresponding weighted sum of values:
+
+{/* Real output of `cachetc scheduled --shadow` on master 086454904, with the
+    folds written as loops, as elsewhere in the post, and the eight keys of
+    each block shortened to the first and last. */}
+
+```cachet
+fn flash_shadow
+    (reads q: [f32; 64, 16])
+    (reads kt: [f32; 16, 32])
+    (reads v: [f32; 32, 16])
+    -> out y: [f32; 64, 16]
+=
+  for i in 0 .. 64 do
+    for d in 0 .. 16 do
+      var m: f32 = from_bits (4286578688 as u32)
+      var l: f32 = -0.0
+      var o: f32 = -0.0
+      for gj in 0 .. 4 do
+        var s_0: f32 = -0.0
+        for c in 0 .. 16 do
+          s_0 = fma (load q[i, c]) (load kt[c, gj * 8 + 0]) s_0
+        ...
+        let m2: f32 =
+          max
+            m
+            (max
+               (max (max s_0 s_4) (max s_2 s_6))
+               (max (max s_1 s_5) (max s_3 s_7)))
+        let alpha: f32 = rescale m m2
+        l =
+          l * alpha +
+            (-0.0 + exp (s_0 - m2) + exp (s_1 - m2) + ... + exp (s_7 - m2))
+        var mix: f32 = o * alpha
+        mix = fma (exp (s_0 - m2)) (load v[gj * 8 + 0, d]) mix
+        ...
+        mix = fma (exp (s_7 - m2)) (load v[gj * 8 + 7, d]) mix
+        o = mix
+        m = m2
+      store y[i, d] = o / l
+```
+
+Each iteration of `gj` handles eight keys. It first computes their scores, then finds the block's maximum by comparing pairs, as `max: halving` in the schedule asks. `m2` is the larger of that maximum and the previous `m`. The summary is rescaled to `m2` once, and the block's weights are added in order, as `sum: order` asks. The initial `from_bits` value is negative infinity.
+
+These loops spell out the arithmetic without any GPU machinery. `flash` must produce exactly the same result as these loops, including the effects of rounding. We can read the shadow to find out which computation we've asked the hardware to perform.
+
+We still need to relate those loops to `attend`. That depends on [laws for combining the summaries](#panel-online-attention), which the library states over the reals. Cachet takes these laws on trust; it doesn't prove them.
+
+The resulting claim has two parts: the kernel and its shadow produce identical results, and, assuming the library's laws, the shadow and `attend` would compute the same result with real-number arithmetic. As with `tiled`, this also relies on the trusted layout steps and matrix instruction's template. `cachetc scheduled` prints the full claim, including the instruction template and library laws it relies on.
+
+## Conclusion
+
+We still had to choose the loop order, block sizes and instructions. But once we'd made those choices, we could ask the compiler to check them: this rewrite leaves the result unchanged, these buffers fit the cache model, this loop stays within its traffic budget. Changing a choice means passing the checks again.
+
+There's still that asterisk in the subtitle. If we deliberately regroup a sum, the kernel must produce exactly the same result as its shadow, which can differ from the original contraction because of rounding. Additional assumptions from the library or platform, such as the laws for `Online` or an instruction's template, are listed in the [claim](#panel-claim).
+
+This is what I want from an explicit compiler. I can choose how the kernel runs, keep the definition it came from, and have the compiler tell me when a change breaks one of my assumptions.
+
+The [complete example](#panel-running) checks that the smaller kernels produce exactly the same results as `matmul`, and the benchmark does the same for the full-size ones. Attention isn't included in those runs. The [related work](#panel-related) panel describes where these ideas come from, and where contractions are not sufficient.
+
+<CachetPanels>
+
+<Panel id="matmul" title="Matrix multiplication">
+
+Each element of the product of two matrices A and B is the dot product of a row of A and a column of B:
+
+<CachetMatmul />
+
+There are three properties of this formula that we can use when deciding how to compute it.
+
+First, every output is independent. `C[i, j]` only depends on row `i` of A and column `j` of B, so we can compute all of the outputs at the same time.
+
+<CachetMatmulSchedules mode="outputs" />
+
+Second, the sum can be split up. In this illustration, three threads compute partial sums and then combine them. Over the reals this preserves the result; in floating point it changes the grouping, so it needs the permission discussed in the main text.
+
+<CachetMatmulSchedules mode="split" />
+
+Third, the formula also works on matrices of blocks. Notice which operations we need to compute each output: `+` and `×` on the elements of A and B. Floating-point numbers support these operations, but so do [matrices](#panel-semiring)! So instead of a matrix of numbers, we can think of A, B and C as matrices of smaller matrices, and multiply them with exactly the same formula. The outer matrices get smaller, and each `×` in the formula becomes a smaller matrix multiplication.
+
+<CachetMatmulSchedules mode="blocks" />
+
+> [!NOTE]
+> There's one difference: unlike numbers, matrices don't commute, so `x × y` and `y × x` are not the same. That's fine, because the formula always multiplies an element of A by an element of B, in that order, and never needs to swap them.
+
+None of these properties is specific to GPUs. Independent outputs give us work to distribute across threads, while [matrix units](#panel-matrix-units) provide instructions for multiplying blocks. CPU kernels can use the same decomposition to keep their inputs in cache.
+
+</Panel>
+
+<Panel id="cache" title="Cache lines">
+
+The animation uses a deliberately small cache: four lines of four values each. When a new line needs space, it replaces the least recently used one. A read from a cached line takes one tick; fetching a missing line takes eight. Reads run one at a time, with no prefetching.
+
+Walking along the rows, each miss pays for the next three reads as well. Walking down the columns, the line is evicted before we come back for its neighbours, so every read misses. Both walks read the same 64 values, but the row walk has 16 misses and the column walk has 64.
+
+An M4 Max has 128-byte cache lines, enough for 32 `f32`s, and much larger caches. Whether a line survives depends on the other accesses between uses and which cache slots they compete for. Real processors also prefetch and overlap memory requests. The ticks illustrate the cost of losing reuse; they aren't a prediction of execution time.
+
+</Panel>
+
+<Panel id="semiring" title="What the blocks need">
+
+We want to replace numbers with blocks and keep using the same formula. The algebra we need for that is a *semiring*: `+` and `×` are associative, `+` is commutative, `×` distributes over `+`, there are identities `0` and `1`, and multiplying by `0` gives `0`. A ring would also need subtraction, which matrix multiplication never uses.
+
+Square matrices over a semiring form another semiring. Commutativity of `×` is not required, which is lucky, since matrices don't have it. For floating-point elements, these laws describe the corresponding real-number operations; rounding can make them fail, as we've seen with associativity.
+
+For example, the `f32` implementation in Cachet's library uses fused multiply-add and states its laws over the reals. Its zero is `-0.0`, so adding zero preserves the sign of a negative zero: `-0.0 + -0.0` is `-0.0`, while `0.0 + -0.0` is `0.0`. (Dividing `1.0` by the two zeroes gives infinities with opposite signs.)
+
+```cachet
+impl Semiring for PlusTimes f32 where
+  const Value = f32
+  fn zero () = -0.0
+  fn one () = 1.0
+  fn add a b = a + b
+  fn mul a b = a * b
+  fn mul_add a b acc = fma a b acc
+  law add associative over reals
+  law add commutative over reals
+  law add identity over reals
+  law mul associative over reals
+  law mul commutative over reals
+  law mul identity over reals
+  law distributive over reals
+  law mul_add over reals
+```
+
+Nothing in `matmul` depends on these particular operations. Binding `S` to `MinPlus f32`, which adds with `min` and multiplies with `+`, gives one step of a shortest-paths computation:
+
+```cachet
+matmul @(S = MinPlus f32) d d e
+```
+
+Here `d` holds edge distances, and each element of `e` starts from this semiring's additive identity, positive infinity. The same formula now finds the shortest two-edge path between each pair of nodes. With zeroes on the diagonal of `d`, it also includes shorter paths.
+
+</Panel>
+
+<Panel id="matrix-units" title="Matrix hardware">
+
+> [!NOTE]
+> NVIDIA introduced Tensor Cores with Volta in 2017; Metal's `simdgroup_matrix` arrived with the A14 in 2020; Intel added AMX tile registers in Sapphire Rapids; and Apple's M4 is the first of its chips to expose Arm's Scalable Matrix Extension (SME). Earlier Apple chips had an undocumented matrix coprocessor, used by the Accelerate framework, which is the kind of thing this post is trying to make visible.
+
+</Panel>
+
+<Panel id="matrix-instruction" title="The GPU matrix instruction">
+
+Whether `simdgroup_mma8` really is the multiply-add of `[f32; 8, 8]` depends on how the hardware accumulates a block's products. Cachet's description of the M4 declares the instruction like this:
+
+```cachet
+instr fn simdgroup_mma8 (a: Vec f32 64) (b: Vec f32 64) (acc: Vec f32 64) -> Vec f32 64 =
+  mma_block a b acc
+  by_target metal
+    "simdgroup_multiply_accumulate({result}, {a}, {b}, {acc});"
+```
+
+The instruction takes two 8 × 8 blocks and an accumulator, each flattened into a vector of 64 floats. `mma_block a b acc` is its *reference body*: for each of the 64 outputs, a chain of eight `fma`s in ascending order of `k`. The checker and Cachet's interpreter use this body. When compiling for the GPU, the backend replaces it with the Metal code in the *template*, a call to Apple's `simdgroup_multiply_accumulate`.
+
+There's a limit to what we can check here: nothing proves that Apple's instruction produces exactly the same result as the reference body. The platform file records a measurement instead. On random, cancelling and subnormal inputs, `simdgroup_multiply_accumulate` matched the reference body bit for bit, with the reference `fma`s flushing subnormals to zero as the GPU does. That gives us evidence for using the template, but the claim still lists it as trusted.
+
+</Panel>
+
+<Panel id="fma" title="Fused multiply-add">
+
+> [!NOTE]
+> Even `a * b + c` leaves a choice for the compiler: should it round the product separately, or use a fused multiply-add? The instruction first appeared in IBM's POWER1 in 1990, only made it into IEEE 754 in 2008, and x86 didn't get it until AMD's Bulldozer and Intel's Haswell in the early 2010s. Because the two round differently, C compilers may "contract" `a * b + c` into an FMA (controlled by the `FP_CONTRACT` pragma), which is a classic source of results changing between compilers or optimisation levels. That's exactly the kind of hidden decision Cachet writes down.
+
+</Panel>
+
+<Panel id="races" title="Checking parallel writes">
+
+> [!NOTE]
+> Compare this with OpenMP's `#pragma omp parallel for`, which takes your word for it: if two iterations write to the same location, that's a data race, and the program has undefined behaviour. Rust's Rayon is closer to what Cachet does, since `par_chunks_mut` hands out disjoint mutable slices, and the borrow checker enforces the rest. There, however, disjointness comes from how the slice was split, rather than from a window written down for each iteration.
+
+</Panel>
+
+<Panel id="blocking" title="Where the blocks live">
+
+Once we've loaded a block, we need somewhere to keep it while we reuse it. The processor has several places to do that. The closer the storage is to the core, the less it holds and the faster we can reach it:
+
+<CachetMemoryHierarchy />
+
+The figure shows where `packed`, the CPU schedule from the post's "Scheduling for the CPU" section, intends to keep each block. The checker uses the platform's cache model to check that the blocks fit. That doesn't guarantee they'll stay there on real hardware: other accesses may evict them, and other processes may share the cache. The example uses small blocks for readability.
+
+> [!NOTE]
+> Cache blocking has been around for a long time. The block sizes are chosen so that the working set stays in cache instead of being streamed from main memory. Kazushige Goto's hand-tuned GotoBLAS took this further by also sizing blocks for the TLB, and its descendant OpenBLAS is still what a lot of numerical software runs on today.
+
+</Panel>
+
+<Panel id="traffic-budget" title="Checking a traffic budget">
+
+A caller can use a `movement` clause to limit how much traffic its calls are allowed to cause. Here is a function that multiplies two 32 × 32 matrices with `packed`, and states its budget:
+
+```cachet
+fn product
+    (reads a: [f32; 32, 32])
+    (reads b: [f32; 32, 32])
+    (mut c: [f32; 32, 32])
+    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)
+    (mut packB: [f32; 16, 8] at DRAM)
+produces Init c
+movement
+  traffic 8 * lines (span_bytes packB.span) from DRAM to L1 and back
+  traffic 16 * lines (span_bytes packA.span) from DRAM to L2 and back
+=
+  packed a b c packA packB
+```
+
+The checker must show that the call to `packed` fits this budget. Suppose we allowed only eight blocks to be copied into `packA`, writing `8` instead of `16` in the second row. The call is refused:
+
+{/* Real output, with the inequality broken over lines. */}
+
+```text
+could not prove declared traffic row at DRAM:
+    ceil (32 / 16) * ceil (32 / 8) * line_ceil bytes_0 128
+  + ceil (32 / 16) * ceil (32 / 8) * ceil (32 / 16) * line_ceil bytes_1 128
+  <= 8 * line_ceil bytes_0 128 + 8 * line_ceil bytes_1 128
+counterexample: bytes_0 = 0, bytes_1 = 1
+```
+
+The extra copies come from the loop order. The blocks of columns, `gj`, are outside the blocks of rows, `gi`, so we repack A's blocks for each block of columns. There are two depth blocks, four column blocks and two row blocks: 2 × 4 × 2 = 16 packs in all. We've only allowed eight. To make the check pass, we have to change the schedule or allow the extra traffic.
+
+</Panel>
+
+<Panel id="simd" title="SIMD groups">
+
+> [!NOTE]
+> Every vendor has a different name for SIMD groups. NVIDIA calls them *warps*, a term borrowed from weaving, where the warp is the set of parallel threads on a loom. AMD calls them *wavefronts* (traditionally 64 threads, though RDNA also supports 32), and Vulkan calls them *subgroups*. "Lockstep" is also a bit of a simplification nowadays: since Volta, threads in an NVIDIA warp have their own program counters, and can diverge and reconverge more freely.
+
+
+</Panel>
+
+<Panel id="claim" title="Reading a claim">
+
+`cachetc scheduled` prints a claim after the generated function. Its first line says which computation the function is related to, and in what sense. For `swapped`, `bits of` means that its results are identical to `matmul`'s, including floating-point rounding, for inputs that satisfy the function's requirements.
+
+Some claims have extra lines. `arithmetic` names the device whose floating-point behaviour applies. `by` lists the algebraic laws the schedule uses. `trusted` lists additional assumptions the checker used but didn't prove, such as a library law stated with a reason, or an instruction template implementing its reference body.
+
+The distinction between library steps and built-in steps matters here. A library step such as `hoist` must prove its relation at each use. Built-in layout steps check their side conditions, but their rewrite rules are part of the compiler we trust. For supported host layouts, `cachetc scheduled --relate` can check the relation separately. An empty `trusted` list doesn't remove our reliance on the compiler, its backend, or the hardware.
+
+Resource requirements appear separately in the generated function's declaration. `working_set` says what must fit in the named caches; `movement` describes the traffic. A caller must satisfy those requirements and any budget of its own. These checks use the platform's memory model.
+
+</Panel>
+
+<Panel id="hoist" title="A library step and its proof">
+
+The `swapped` schedule uses `hoist (j, k) c` to move the sum's steps outside the loop over output columns. The `cachet:steps` library defines the rewrite and its proof recipe together:
+
+```cachet
+step fn hoist (j, k) c =
+  from
+    for j in $a .. $b do
+      store $cell = fold k in $lo .. $hi from (load $cell) as $acc: $E do $step
+  to
+    for k in $lo .. $hi do
+      for j in $a .. $b do
+        let $acc = load $cell
+        store $cell = $step[$acc]
+  relate
+    per cell c fold S.k
+    per cell c fold T.k
+    interchange S.j
+```
+
+`from` matches a loop over `j` that stores a sum into a cell. `cachetc` writes the sum as a `fold`: it starts from what the cell holds, `load $cell`, and updates the running total `$acc` once for each `k`. `to` runs the steps of the sum outside the loop over `j`, so each visit loads the total from its cell, updates it, and stores it back. In our schedule, `hoist (j, k) c` names the loop over `j`, the sum over `k` and the output `c`.
+
+Names starting with `$` are pattern variables: they match parts of the original program. For example, `$step` is the code in the sum, and `$a`, `$b`, `$lo` and `$hi` are the loop bounds.
+
+The last part, `relate`, tells the checker how to compare the original program, `S`, with the replacement, `T`. The first two lines read each sum as a sequence of updates to its cell of `c`, one for each `k`. The last asks the checker to show that moving the loop over `j` inside produces identical outputs. Different values of `j` update different cells of `c`, and the inputs are only read. Swapping `j` and `k` changes when we visit each output, but each output still receives its updates in ascending order of `k`.
+
+The checker uses an SMT solver, an automated prover, to check the equivalence for the actual program being rewritten. Importing `hoist` doesn't exempt it from the check: if we break its definition, the schedule is refused, as the [side note on broken steps](#panel-wrong) shows.
+
+Not every step needs this much. `interchange`, which `bands` uses to reorder its packing loops, swaps two loops and asks the checker to show that no iteration reads what another writes:
+
+```cachet
+step fn interchange (i, j) =
+  from
+    for i in $A do
+      for j in $B do
+        $body
+  to
+    for j in $B do
+      for i in $A do
+        $body
+  relate
+    interchange S.i
+```
+
+</Panel>
+
+<Panel id="wrong" title="When a step is wrong">
+
+The library's `hoist` step works, which doesn't say much for the checker. Suppose we break it. We'll copy it into our own program under a new name, keeping its `relate` proof recipe, and use the copy in place of `hoist` in `swapped`.
+
+We start with an off-by-one, in a copy called `sloppy`, by changing a single line of `to`:
+
+```cachet
+    for k in $lo + 1 .. $hi do
+```
+
+The schedule that calls it is refused:
+
+```text
+could not prove relation swapped'1_sloppy: the loops at S.k and T.k run the same number of times
+```
+
+`S` and `T` are the programs before and after the step, as in `hoist`'s `relate`, and `swapped'1` is the program the step starts from, after `zero`.
+
+That one is easy to spot by hand. Here's one that isn't. In a copy called `backwards`, we keep the loop bounds but change its body to visit the products in reverse order. `$step[$acc][k := e]` replaces `k` with `e` in the matched sum's body:
+
+```cachet
+        store $cell = $step[$acc][k := $hi - 1 - (k - $lo)]
+```
+
+Every product is still added exactly once, and the loop nest it writes out is a correct matrix multiplication over the reals. In floating point, the additions happen in the opposite order, so they round differently:
+
+```text
+could not prove relation swapped'1_backwards: the two runs hold the same words in parameter 3 after each iteration of the loops at S.j and T.j
+```
+
+Parameter 3 is `c`: the checker couldn't establish that its contents are identical after the rewrite. Notice that this is a failed proof, rather than a proof that the kernel is wrong: the checker reports "a model the search cannot rule out". It's refused all the same, because the burden of proof is on the step.
+
+There's also the requirement that `c` can't overlap `a` or `b`. A call already has to prove this, without a schedule getting involved. Passing the same matrix as an input and as the output, as in `matmul a b a`, is refused at the call:
+
+```text
+could not prove the call of matmul lends parts of one whole at once, which must be apart: Disjoint (interval (allocated region) 0 (1024 * sizeof f32)) (interval (allocated region) 0 (1024 * sizeof f32))
+```
+
+The checker has caught the missing iteration, the reversed sum and the overlapping arrays. The backwards loop is the interesting one, though. Neither order is more accurate in general, but we asked for identical results, so the rewrite is refused. Sometimes a different order is exactly what makes a kernel fast, as it is for attention near the end of the post.
+
+These examples use library steps, whose relations are checked at each use. The [claim panel](#panel-claim) explains how this differs from built-in layout steps, and how the compiler reports any library laws or instruction templates it takes on trust.
+
+</Panel>
+
+<Panel id="epilogue" title="Fusing an epilogue">
+
+A layer of a neural network usually does something to the product before storing it, such as a ReLU, which replaces negative values with zero. In Cachet, that's part of the contraction:
+
+```cachet
+contraction layer
+    (reads a: [f32; M, K])
+    (reads b: [f32; K, N])
+    -> out c: [f32; M, N] =
+  c[i, j] = max (sum k. a[i, k] * b[k, j]) 0.0
+```
+
+We can apply `tiled`'s two steps to this contraction too. Only the last line of the resulting kernel changes:
+
+```cachet
+      t = mma x y t
+    store ct_2 = max t 0.0
+```
+
+The ReLU is applied to the accumulator tile while the SIMD groups still hold it, so the product is never written to memory and read back. We didn't have to ask for this. A contraction's equations describe values, not buffers, so an intermediate only gets storage of its own if a schedule asks for it. The same guarantee applies here: the kernel produces exactly the same result as `layer` evaluated using the GPU's arithmetic.
+
+</Panel>
+
+<Panel id="online-attention" title="The running summary for attention">
+
+[FlashAttention](https://arxiv.org/abs/2205.14135) avoids storing the full score matrix by keeping a running summary: the largest score so far, `m`, a sum `l` of weights `e^(s - m)`, and a sum `o` of those weights times the values. When a later block raises the maximum, we rescale both totals by the same factor. Over the reals, this leaves their ratio `o / l` unchanged, so we can adjust the old summary without going back to the old scores. Then we add the new block's contributions and carry on.
+
+The `cachet:attention` library puts these operations in `Online`, an implementation of the `Monoid` interface. A *monoid* provides an empty value and an associative operation for combining values. For these summaries, associativity holds over the reals. To combine two summaries, we rescale both to their shared maximum and add them:
+
+```cachet
+impl Monoid for Online where
+  const Value = Weights
+  fn empty () = Weights { m = -Num.infinity (), l = -0.0, o = -0.0 }
+  fn combine (a: Weights) (b: Weights) =
+    let m = max a.m b.m
+    let x = rescale a.m m
+    let y = rescale b.m m
+    Weights { m, l = a.l * x + b.l * y, o = a.o * x + b.o * y }
+```
+
+The final weighted value is `o / l`, which the library calls `normalised`. `key s v` makes the summary of a single key, with score `s` and value `v`.
+
+To regroup this reduction, the checker needs laws for these operations. For `PlusTimes f32`, Cachet proves the [semiring laws](#panel-semiring) for the corresponding real-number operations. It doesn't prove `Online`'s laws. The library states them with reasons, which the checker takes on trust.
+
+The algebra behind combining summaries is that `(m, l, o)` represents the pair `(e^m l, e^m o)`, and combining summaries adds these pairs. The library also states a *block law*, which lets a schedule add a whole block of keys at once:
+
+```cachet
+  law associative over reals = "(m, l, o) stands for (e^m l, e^m o), which combine adds"
+  law block over reals = "a block's terms, each e^(s - m2) at the block's largest score m2, add to the summary rescaled to m2 as combine adds them"
+```
+
+The reasons in these declarations are shortened from the library's. They explain the algebra, but aren't proofs checked by the compiler.
+
+</Panel>
+
+<Panel id="reproducible" title="Reproducibility">
+
+> [!NOTE]
+> Running the same computation with different schedules doesn't always give identical results. GPU libraries often split a reduction across threads and combine the partial sums with atomics, which makes the order (and so the result) vary from run to run. This is why frameworks like PyTorch have a separate "deterministic algorithms" mode, which is often slower. In Cachet, a schedule that changes the order says so in its contraction, and the shadow shows exactly which order it uses.
+
+</Panel>
+
+<Panel id="related" title="Related work">
+
+[Halide](https://halide-lang.org/) separates an image-processing algorithm from its schedule: the algorithm says what each pixel is, and the schedule chooses the order, tiling, vectorisation and parallelism. [TVM](https://arxiv.org/abs/1802.04799) brought the same idea to deep learning; its `tensorize` step matches a computation against the description of a hardware intrinsic and replaces it with that intrinsic, much like using the reference body of `simdgroup_mma8`.
+
+The closest relative to what I'm trying to do here is [Exo](https://exo-lang.dev/): the programmer chooses the transformations, and the compiler checks them. [Exo 2](https://arxiv.org/abs/2411.07211) lets users build scheduling libraries by composing a small set of trusted primitives. Cachet's library steps also put rewrites in user code, with a relation to check at each use.
+
+Index notation has precedents too. [Tensor Comprehensions](https://arxiv.org/html/1802.04730v3#S3) generalises Einstein notation for tensor computations. [TACO](https://github.com/tensor-compiler/taco/blob/master/include/taco/index_notation/README.md) supports index equations and scheduling operations, including for sparse tensors. [Dex](https://arxiv.org/abs/2104.05372) makes index sets part of its type system. Matrix operations with different choices of addition and multiplication are central to [GraphBLAS](https://raw.githubusercontent.com/DrTimothyAldenDavis/GraphBLAS/stable/Doc/GraphBLAS_UserGuide.pdf), where a semiring supplies those operations.
+
+The treatment of floating point is where the projects diverge. [Futhark's `reduce`](https://futhark-lang.org/examples/scan-reduce.html) requires an associative operator and a neutral element, but does not verify those laws. Cachet asks for permission to regroup in the contraction, with `[reassoc]`. It then checks the kernel against the exact arithmetic order in its shadow, and relates that shadow to the original contraction using the stated laws.
+
+[Triton](https://triton-lang.org/main/programming-guide/chapter-1/introduction.html) and [ThunderKittens](https://hazyresearch.stanford.edu/blog/2024-05-12-tk) expose blocks or tiles directly to the programmer. This is roughly the level of Cachet's grids and tiles; contractions and schedules provide a way to construct those programs from a separate definition.
+
+That lower layer is still needed. Contractions describe matrix multiplication, convolutions written as contractions, and attention with a monoid like `Online`. But a kernel that stages inputs through shared memory with explicit barriers still needs to be written directly with grids and tiles.
+
+</Panel>
+
+<Panel id="running" title="The complete example">
+
+[The complete example](/code/cachet-contractions.cachet) uses the final, generic `matmul` throughout, including for `rows`, `swapped`, and `tiled`. The early `f32` examples correspond to binding `S` to `PlusTimes f32`.
+
+The file contains the matrix-multiplication schedules compared in the overview; attention is separate. Its `main` compares `rows`, `swapped`, `tiled`, `tower` and `packed` with `matmul` on the same `f32` inputs. The larger `fast`, `bands`, `sme` and `big_tiles` schedules are defined here but aren't called by `main`; the benchmark checks that their results match `matmul` exactly.
+
+The file starts by naming the platform, which is where `M4Gpu` comes from:
+
+```cachet
+module (platform = AppleSilicon)
+import "../../platforms/apple-silicon.cachet"
+import "cachet:monoid"
+import "cachet:simd"
+import "cachet:steps"
+import "../../examples/lib/panel-major.cachet"
+```
+
+Cachet's compiler isn't public yet, so the file is here to read rather than to run. We ran it twice: once in Cachet's interpreter, and once as a native executable on an M4 Max Mac, where its GPU grids use Metal. Both printed:
+
+```text
+1.751874327659607
+0
+0
+0
+0
+0
+3.0
+```
+
+The first line is an element of the product. The next five lines show how many output elements differ from `matmul` for `rows`, `swapped`, `tiled`, `tower` and `packed`. The comparison is bit for bit, and all five counts are zero. The next line is the shortest path from node 0 to node 2 in a ring, computed by `matmul` at `MinPlus f32`.
+
+> [!NOTE]
+> These are correctness examples. The sizes here are small; the [performance measurements](#comparing-the-results) use the same schedules at 1024 × 1024 and larger.
+
+</Panel>
+
+</CachetPanels>

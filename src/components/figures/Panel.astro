@@ -1,0 +1,13 @@
+---
+interface Props {
+  id: string;
+  title: string;
+}
+
+const { id, title } = Astro.props;
+---
+
+<section id={`panel-${id}`} class="side-panel" data-panel>
+  <h3 tabindex="-1">{title}</h3>
+  <slot />
+</section>

@@ -1,0 +1,221 @@
+---
+import "./cachet-hardware.css";
+const eight = Array.from({ length: 8 }, (_, i) => i);
+const four = [0, 1, 2, 3];
+const origins = { A: [22, 192], B: [184, 35], C: [184, 192] };
+---
+
+<cachet-blocking-cache
+  class="cachet-hardware"
+  aria-label="Blocking and movement between memory and cache"
+>
+  <div class="hw-toolbar">
+    <div class="hw-options" role="group" aria-label="Cache traversal">
+      <button data-mode="rows" aria-pressed="false" disabled>Whole rows</button>
+      <button data-mode="blocked" aria-pressed="true" disabled
+        >4 × 4 blocks</button
+      >
+    </div>
+    <div class="hw-playback">
+      <button data-hw-play aria-pressed="false" disabled>Play</button>
+      <button data-hw-step aria-label="Advance one product" disabled
+        >Step</button
+      >
+    </div>
+  </div>
+  <svg
+    class="hw-diagram"
+    viewBox="0 0 700 365"
+    role="img"
+    aria-label="A is left of C, B is above C. Coloured inputs have a copy in the cache. Packets travel from memory to cache, then to the CPU and the output."
+  >
+    <g data-matrices>
+      <text x="22" y="36" class="hw-small hw-muted">Continuing with</text>
+      <text x="22" y="53" class="hw-small hw-muted">the next row of C</text>
+      <text x="22" y="87" class="hw-small" data-progress>0 of 16 products</text>
+      {
+        Object.entries(origins).map(([name, [x, y]]) => (
+          <g style={`color:var(--hw-${name.toLowerCase()})`}>
+            <text x={x} y={y - 12} font-size="16">
+              {name}
+            </text>
+            {eight.map(row =>
+              eight.map(col => (
+                <rect
+                  data-cell
+                  data-array={name}
+                  data-row={row}
+                  data-col={col}
+                  x={x + col * 14}
+                  y={y + row * 14}
+                  width="11"
+                  height="11"
+                  rx="1.5"
+                  fill="currentColor"
+                  opacity=".09"
+                />
+              ))
+            )}
+            {name !== "C" &&
+              eight.map(row =>
+                [0, 4].map(col => (
+                  <rect
+                    data-line
+                    data-array={name}
+                    data-row={row}
+                    data-col={col}
+                    x={x + col * 14 - 1}
+                    y={y + row * 14 - 1}
+                    width="55"
+                    height="13"
+                    rx="2"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-opacity=".06"
+                  />
+                ))
+              )}
+            <rect
+              data-block
+              data-array={name}
+              x={x - 4}
+              y={y - 4}
+              width="61"
+              height="61"
+              rx="4"
+              fill="none"
+              stroke="currentColor"
+              stroke-opacity=".6"
+            />
+            <rect
+              data-focus
+              data-array={name}
+              width="13"
+              height="13"
+              rx="2"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            />
+          </g>
+        ))
+      }
+      <text x="22" y="334" class="hw-small hw-muted"
+        >Tinted inputs have a copy in cache.</text
+      >
+      <text x="22" y="351" class="hw-small hw-muted"
+        >The output gets darker as products arrive.</text
+      >
+    </g>
+    <g data-memory transform="translate(360 0)">
+      <text x="20" y="23" class="hw-title">Main memory</text>
+      <rect x="20" y="35" width="300" height="40" rx="4" class="hw-idle"></rect>
+      <text x="32" y="60" class="hw-small hw-mono" data-memory-line
+        >A[1, 0–3]</text
+      >
+      {
+        four.map(c => (
+          <rect
+            data-memory-word
+            x={242 + c * 18}
+            y="47"
+            width="13"
+            height="16"
+            rx="2"
+            fill="var(--hw-a)"
+            opacity=".7"
+          />
+        ))
+      }
+      <text x="20" y="135" class="hw-title">Cache</text>
+      <text x="320" y="135" text-anchor="end" font-size="11" class="hw-muted"
+        >8 lines, 4 values each</text
+      >
+      {
+        eight.map(slot => (
+          <g
+            data-slot
+            data-slot-index={slot}
+            transform={`translate(${20 + (slot % 2) * 156} ${148 + Math.floor(slot / 2) * 29})`}
+          >
+            <rect
+              data-slot-frame
+              width="144"
+              height="23"
+              rx="3"
+              class="hw-idle"
+              stroke="var(--border)"
+            />
+            <text x="7" y="15" font-size="11" class="hw-mono" data-slot-label>
+              empty
+            </text>
+            {four.map(c => (
+              <rect
+                data-slot-word
+                x={103 + c * 9}
+                y="7"
+                width="6"
+                height="9"
+                rx="1"
+                fill="currentColor"
+                opacity=".6"
+              />
+            ))}
+          </g>
+        ))
+      }
+      <rect
+        x="20"
+        y="297"
+        width="300"
+        height="45"
+        rx="5"
+        class="hw-idle"
+        stroke="var(--border)"></rect>
+      <text x="32" y="314" font-size="11" class="hw-muted">CPU</text>
+      <text
+        x="170"
+        y="333"
+        text-anchor="middle"
+        font-size="12"
+        class="hw-mono"
+        data-operation>C[1,0] += A[1,0] × B[0,0]</text
+      >
+    </g>
+    <path
+      data-route
+      fill="none"
+      stroke="var(--hw-a)"
+      stroke-opacity=".25"
+      stroke-width="1.5"></path>
+    <g data-fill-packet fill="var(--hw-a)"
+      >{
+        four.map(c => (
+          <rect x={-20 + c * 11} y="-5" width="9" height="10" rx="2" />
+        ))
+      }</g
+    >
+    <circle data-value-packet r="4.5" fill="var(--hw-a)"></circle>
+  </svg>
+  <p class="hw-caption" data-transfer>Fetch a line for the next row of A.</p>
+  <p class="hw-caption hw-description" data-explanation aria-live="polite">
+    The first row has received its contributions from these blocks. The four
+    lines of B are still in cache: each can now help compute the next row.
+  </p>
+  <p class="hw-model">
+    A short excerpt from the multiplication, using a small illustrative cache.
+    Fetches from memory are slowed down; hits run faster. Only input data
+    occupies this cache. Output colour includes work done before the excerpt.
+  </p>
+  <noscript
+    ><p>
+      The four cached lines of the B block serve every row of the output block.
+      Traversing all of B between rows would evict those lines from this small
+      cache.
+    </p></noscript
+  >
+</cachet-blocking-cache>
+
+<script>
+  import "./cachet-blocking-cache.js";
+</script>

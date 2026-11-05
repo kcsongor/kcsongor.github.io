@@ -1,0 +1,238 @@
+---
+// The A, B and C matrices of a multiplication, laid out so that each row of A
+// and column of B lines up with the outputs it feeds. Figures colour the
+// cells by setting `data-state` or inline styles from their own scripts.
+interface Props {
+  m: number;
+  k: number;
+  n: number;
+  // Renders the cells of C as buttons, so that outputs can be selected.
+  selectable?: boolean;
+}
+
+const { m, k, n, selectable = false } = Astro.props;
+const range = (length: number) => Array.from({ length }, (_, index) => index);
+const cells = (rows: number, cols: number) =>
+  range(rows * cols).map(index => ({
+    row: Math.floor(index / cols),
+    col: index % cols,
+  }));
+---
+
+<div
+  class="matmul-layout"
+  style={`--m: ${m}; --k: ${k}; --n: ${n}; --a-width: ${k}fr; --c-width: ${n}fr`}
+>
+  <div class="matmul-context"><slot /></div>
+  <div class="matmul-label label-b">B</div>
+  <div class="matmul-matrix matrix-b">
+    <div class="matmul-index index-top" aria-hidden="true">
+      {
+        range(n).map(j => (
+          <span data-axis="j" data-index={j}>
+            {j}
+          </span>
+        ))
+      }
+    </div>
+    <div class="matmul-index index-left" aria-hidden="true">
+      {
+        range(k).map(t => (
+          <span data-axis="k" data-index={t}>
+            {t}
+          </span>
+        ))
+      }
+    </div>
+    <div class="matmul-cells" role="img" data-matrix="b">
+      {
+        cells(k, n).map(({ row, col }) => (
+          <span data-row={row} data-col={col} />
+        ))
+      }
+    </div>
+  </div>
+  <div class="matmul-label label-a">A</div>
+  <div class="matmul-matrix matrix-a">
+    <div class="matmul-index index-left" aria-hidden="true">
+      {
+        range(m).map(i => (
+          <span data-axis="i" data-index={i}>
+            {i}
+          </span>
+        ))
+      }
+    </div>
+    <div class="matmul-index index-bottom" aria-hidden="true">
+      {
+        range(k).map(t => (
+          <span data-axis="k" data-index={t}>
+            {t}
+          </span>
+        ))
+      }
+    </div>
+    <div class="matmul-cells" role="img" data-matrix="a">
+      {
+        cells(m, k).map(({ row, col }) => (
+          <span data-row={row} data-col={col} />
+        ))
+      }
+    </div>
+  </div>
+  <div class="matmul-matrix matrix-c">
+    <div
+      class="matmul-cells"
+      role={selectable ? undefined : "img"}
+      aria-label={selectable ? undefined : `${m} by ${n} output matrix C`}
+      data-matrix="c"
+    >
+      {
+        cells(m, n).map(({ row, col }) =>
+          selectable ? (
+            <button
+              type="button"
+              data-row={row}
+              data-col={col}
+              aria-label={`Select C[${row}, ${col}]`}
+            />
+          ) : (
+            <span data-row={row} data-col={col} />
+          )
+        )
+      }
+    </div>
+  </div>
+  <div class="matmul-label label-c">C</div>
+</div>
+
+<style>
+  .matmul-layout {
+    --index-size: 1.1rem;
+    display: grid;
+    grid-template-columns:
+      1rem minmax(0, var(--a-width)) minmax(0, var(--c-width))
+      1rem;
+    grid-template-areas:
+      ".  context  b  lb"
+      "la a  c  lc";
+    column-gap: calc(var(--index-size) + 0.5rem);
+    row-gap: 2rem;
+    padding-block: var(--index-size);
+    width: 100%;
+    max-width: 42rem;
+    margin-inline: auto;
+    justify-content: center;
+    align-items: center;
+  }
+  .matmul-context {
+    grid-area: context;
+    min-width: 0;
+    padding-inline: 0.25rem;
+  }
+  .matrix-a {
+    grid-area: a;
+    --cols: var(--k);
+    --rows: var(--m);
+  }
+  .matrix-b {
+    grid-area: b;
+    --cols: var(--n);
+    --rows: var(--k);
+  }
+  .matrix-c {
+    grid-area: c;
+    --cols: var(--n);
+    --rows: var(--m);
+  }
+  .label-a {
+    grid-area: la;
+  }
+  .label-b {
+    grid-area: lb;
+  }
+  .label-c {
+    grid-area: lc;
+  }
+  .matmul-label {
+    color: var(--foreground);
+    font-weight: 600;
+    text-align: center;
+  }
+  .matmul-matrix {
+    position: relative;
+  }
+  .matmul-cells {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    border: 0;
+  }
+  .matmul-cells > * {
+    border: 0;
+    background: var(--matrix-idle);
+    padding: 0;
+    min-height: 0;
+    box-shadow: none;
+  }
+  .gpu-figure .matrix-c button {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+  .matmul-cells [data-state="line"] {
+    background: color-mix(in srgb, var(--figure-accent) 12%, var(--background));
+  }
+  .matmul-cells [data-state="done"] {
+    background: color-mix(in srgb, var(--figure-accent) 40%, var(--background));
+  }
+  .matmul-cells [data-state="current"] {
+    background: var(--figure-accent);
+  }
+  .matmul-index {
+    position: absolute;
+    display: grid;
+    font-family: var(--font-mono, monospace);
+    font-size: 0.7rem;
+    line-height: 1;
+    color: color-mix(in srgb, var(--foreground) 55%, transparent);
+  }
+  .matmul-index span {
+    display: grid;
+    place-items: center;
+  }
+  .matmul-index [data-active="true"] {
+    color: var(--foreground);
+    font-weight: 700;
+  }
+  .index-top,
+  .index-bottom {
+    left: 0;
+    right: 0;
+    height: var(--index-size);
+    grid-template-columns: repeat(var(--cols), 1fr);
+  }
+  .index-top {
+    bottom: 100%;
+  }
+  .index-bottom {
+    top: 100%;
+  }
+  .index-left {
+    top: 0;
+    bottom: 0;
+    right: 100%;
+    width: var(--index-size);
+    grid-template-rows: repeat(var(--rows), 1fr);
+  }
+  @media (max-width: 520px) {
+    .matmul-layout {
+      --index-size: 0.9rem;
+      column-gap: calc(var(--index-size) + 0.2rem);
+      row-gap: 1.5rem;
+    }
+    .matmul-index {
+      font-size: 0.7rem;
+    }
+  }
+</style>

@@ -1,0 +1,591 @@
+---
+import schedules from "./cachet-schedule-stages.json";
+import { listing } from "./cachet-highlight.mjs";
+
+interface Props {
+  name: keyof typeof schedules;
+  initialStage?: number;
+}
+
+const { name, initialStage = schedules[Astro.props.name].length - 1 } =
+  Astro.props;
+// The left pane always shows the contraction and the whole schedule: the steps
+// a stage has taken, the current one marked, then, greyed out, those it hasn't.
+// The right pane is the schedule's function after the stage's step, as
+// Cachet's stepper prints it, with each line linked to the steps it comes from.
+const all = schedules[name];
+// Long schedules use a named step picker instead of a row of bare numbers.
+const numbered = all.length > 6;
+
+const escaped = (text: string) =>
+  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+const inlineCode = (text: string) =>
+  escaped(text).replace(/`([^`]+)`/g, "<code>$1</code>");
+
+type Link = { source: number; lines: number[] };
+const sourceMarks = (stage: {
+  source: string;
+  future: number[];
+  links: Link[];
+}) =>
+  new Map<number, Record<string, unknown>>([
+    ...stage.future.map(line => [line, { "data-future": "" }] as const),
+    ...stage.links.map(
+      (link, id) =>
+        [
+          link.source,
+          {
+            "data-link": id,
+            tabindex: 0,
+            role: "button",
+            "aria-pressed": "false",
+            "aria-label": `Highlight generated code for ${stage.source.split("\n")[link.source].trim()}`,
+          },
+        ] as const
+    ),
+  ]);
+const outputMarks = (links: Link[]) => {
+  const ids = new Map<number, number[]>();
+  links.forEach((link, id) =>
+    link.lines.forEach(line => ids.set(line, [...(ids.get(line) ?? []), id]))
+  );
+  return new Map(
+    [...ids].map(([line, of]) => [line, { "data-links": of.join(" ") }])
+  );
+};
+
+const stages = await Promise.all(
+  all.map(async (stage, index) => {
+    const before = all[index - 1];
+    return {
+      ...stage,
+      note: inlineCode(stage.note),
+      heading: inlineCode(index === 0 ? stage.title : `\`${stage.title}\``),
+      sourceHtml: await listing(
+        stage.source,
+        undefined,
+        sourceMarks(stage),
+        new Set(stage.current === null ? [] : [stage.current])
+      ),
+      // A viewer of separate schedules marks what changed from the one
+      // before; a schedule's steps mark the lines the step wrote.
+      outputHtml: await listing(
+        stage.output,
+        before?.output,
+        outputMarks(stage.links),
+        stage.changed === null ? undefined : new Set(stage.changed)
+      ),
+      index,
+      claimChanged:
+        index > 0 && before.verdict !== stage.verdict && stage.verdict !== null,
+    };
+  })
+);
+---
+
+<cachet-schedule
+  class="gpu-figure matrix-figure not-prose"
+  data-initial-stage={initialStage}
+  data-wrap="true"
+>
+  <figure>
+    <figcaption>Schedule and generated code</figcaption>
+    <div class="schedule-controls" data-controls hidden>
+      {
+        numbered ? (
+          <label class="schedule-picker">
+            <span>Jump to a step</span>
+            <select data-stage-picker aria-label="Schedule step">
+              {stages.map((stage, index) => (
+                <option value={index} selected={index === initialStage}>
+                  {index === 0 ? "Start" : `Step ${index}`} · {stage.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <div
+            class="schedule-tabs matrix-chapters"
+            role="group"
+            aria-label="Schedule steps"
+          >
+            {stages.map((stage, index) => (
+              <button
+                type="button"
+                data-goto={index}
+                aria-pressed={index === initialStage ? "true" : "false"}
+              >
+                <span class="matrix-step-number">
+                  {index === 0 ? "START" : String(index).padStart(2, "0")}
+                </span>
+                <span class="schedule-tab-title">{stage.title}</span>
+              </button>
+            ))}
+          </div>
+        )
+      }
+      <div class="schedule-toolbar">
+        <div
+          class="schedule-steps"
+          role="group"
+          aria-label="Move through schedule steps"
+        >
+          <button type="button" data-step="-1">‹ Previous</button>
+          <span class="schedule-position" data-position aria-live="polite"
+          ></span>
+          <button type="button" data-step="1">Next ›</button>
+        </div>
+        <div class="schedule-options">
+          <label
+            ><input type="checkbox" data-wrap-control checked /> Wrap lines</label
+          >
+          <button type="button" data-expand aria-pressed="false"
+            >Expand code</button
+          >
+        </div>
+      </div>
+    </div>
+    <div class="schedule-stages">
+      {
+        stages.map(stage => (
+          <section data-stage>
+            <div class="schedule-story">
+              <p class="schedule-heading" set:html={stage.heading} />
+              {stage.note && <p class="schedule-note" set:html={stage.note} />}
+            </div>
+            <div class="schedule-legend" aria-label="Code highlights">
+              <span>
+                <i class="changed-key" aria-hidden="true" />
+                Changed in this step
+              </span>
+              <span>
+                <i class="linked-key" aria-hidden="true" />
+                Linked to selected step
+              </span>
+              {stage.future.length > 0 && <span>Faded steps run later</span>}
+            </div>
+            <div class="schedule-panes">
+              <div class="schedule-pane">
+                <div class="schedule-pane-header">
+                  <p class="schedule-pane-label">Definition and schedule</p>
+                  <button
+                    type="button"
+                    data-copy
+                    aria-label="Copy the definition and schedule"
+                    aria-live="polite"
+                    disabled
+                  >
+                    Copy
+                  </button>
+                </div>
+                <Fragment set:html={stage.sourceHtml} />
+              </div>
+              <div class="schedule-pane">
+                <div class="schedule-pane-header">
+                  <p class="schedule-pane-label">Generated function</p>
+                  <button
+                    type="button"
+                    data-copy
+                    aria-label="Copy the generated function"
+                    aria-live="polite"
+                    disabled
+                  >
+                    Copy
+                  </button>
+                </div>
+                <Fragment set:html={stage.outputHtml} />
+              </div>
+            </div>
+            {stage.verdict && (
+              <div
+                class:list={[
+                  "schedule-verdict",
+                  { "is-changed": stage.claimChanged },
+                ]}
+              >
+                <span class="schedule-claim-label">Checked claim</span>
+                <code>{stage.verdict}</code>
+              </div>
+            )}
+          </section>
+        ))
+      }
+    </div>
+    <div class="schedule-inspection" data-inspection hidden>
+      <span data-selection role="status"
+        >Select a schedule step to keep its generated lines highlighted.</span
+      >
+      <button type="button" data-clear hidden>Clear selection</button>
+    </div>
+  </figure>
+</cachet-schedule>
+
+<script>
+  import "./cachet-schedule.js";
+</script>
+
+<style>
+  cachet-schedule {
+    --schedule-muted: color-mix(
+      in srgb,
+      var(--foreground) 65%,
+      var(--background)
+    );
+    --schedule-surface: color-mix(
+      in srgb,
+      var(--foreground) 3%,
+      var(--background)
+    );
+  }
+  .schedule-controls {
+    margin: 1rem 0 1.25rem;
+  }
+  .schedule-controls[hidden],
+  .schedule-inspection[hidden],
+  [data-clear][hidden] {
+    display: none;
+  }
+  .schedule-tabs {
+    margin-bottom: 0.6rem;
+  }
+  .schedule-tab-title {
+    overflow-wrap: anywhere;
+  }
+  .schedule-picker {
+    display: flex;
+    gap: 0.5rem 1rem;
+    font-size: 0.75rem;
+    color: var(--schedule-muted);
+  }
+  .schedule-picker select {
+    flex: 1;
+    min-width: 0;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--background);
+    color: var(--foreground);
+    font: 0.8rem var(--font-code);
+  }
+  .schedule-toolbar,
+  .schedule-steps,
+  .schedule-options {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .schedule-toolbar {
+    justify-content: space-between;
+    margin-top: 0.6rem;
+    gap: 0.5rem 1.25rem;
+  }
+  .schedule-position {
+    font-size: 0.75rem;
+    color: var(--schedule-muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 5rem;
+    text-align: center;
+  }
+  .gpu-figure .schedule-toolbar button,
+  .gpu-figure [data-clear] {
+    min-height: 2.75rem;
+    border: 0;
+    padding: 0.45rem 0.5rem;
+    font-size: 0.75rem;
+    color: var(--schedule-muted);
+    box-shadow: none;
+  }
+  .gpu-figure [data-expand][aria-pressed="true"] {
+    color: var(--foreground);
+  }
+  .schedule-options {
+    gap: 1rem;
+  }
+  .schedule-options label {
+    font-size: 0.75rem;
+    gap: 0.4rem;
+    color: var(--schedule-muted);
+    cursor: pointer;
+  }
+  .schedule-options input {
+    accent-color: var(--matrix-first);
+  }
+  section + section {
+    margin-top: 1.5rem;
+  }
+  /* All explanations share a grid row, sized by the tallest one at the
+     current width. Hidden stories and legends reserve space; hidden code
+     does not. This keeps the panes aligned without clipping longer notes. */
+  cachet-schedule[data-ready] .schedule-stages {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  cachet-schedule[data-ready] section {
+    display: contents;
+  }
+  cachet-schedule[data-ready] .schedule-story {
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+  cachet-schedule[data-ready] .schedule-legend {
+    grid-area: 2 / 1;
+  }
+  cachet-schedule[data-ready] .schedule-panes {
+    grid-area: 3 / 1;
+  }
+  cachet-schedule[data-ready] .schedule-verdict {
+    grid-area: 4 / 1;
+  }
+  cachet-schedule[data-ready] section:not(.is-current) > * {
+    visibility: hidden;
+  }
+  cachet-schedule[data-ready]
+    section:not(.is-current)
+    > :is(.schedule-panes, .schedule-verdict) {
+    display: none;
+  }
+  .schedule-story {
+    margin-bottom: 1rem;
+  }
+  .schedule-heading {
+    margin: 0 0 0.4rem;
+    font-size: 1rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  :global(#article) .schedule-heading :global(code) {
+    font-size: 0.9rem;
+  }
+  .schedule-note {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.65;
+    color: var(--schedule-muted);
+    max-width: 85ch;
+  }
+  .schedule-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.7rem;
+    color: var(--schedule-muted);
+  }
+  .schedule-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .schedule-legend i {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 2px;
+  }
+  .changed-key {
+    background: var(--matrix-first);
+  }
+  .linked-key {
+    background: var(--matrix-second);
+  }
+  .schedule-panes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  .schedule-pane {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .schedule-pane-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 2.75rem;
+    padding-inline: 0.8rem 0.35rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--schedule-surface);
+  }
+  .schedule-pane-label {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .gpu-figure .schedule-pane [data-copy] {
+    font-size: 0.7rem;
+    min-height: 2.75rem;
+    padding: 0.4rem 0.6rem;
+    border: 0;
+    color: var(--schedule-muted);
+    background: transparent;
+  }
+  :global(#article) .schedule-pane :global(pre) {
+    display: block;
+    margin: 0;
+    padding: 0.85rem 0;
+    max-height: 36rem;
+    overflow: auto;
+    line-height: 1.75;
+    border-radius: 0;
+    scrollbar-gutter: stable;
+    tab-size: 2;
+  }
+  :global(#article) .schedule-pane :global(pre code) {
+    display: block;
+    font-size: 0.875rem;
+    line-height: inherit;
+    white-space: normal;
+    overflow-wrap: normal;
+  }
+  .schedule-pane :global(.line) {
+    display: block;
+    position: relative;
+    width: max-content;
+    min-width: 100%;
+    min-height: 1.75em;
+    white-space: pre;
+    box-sizing: border-box;
+    padding-inline: 3.2rem 0.8rem;
+    border-left: 2px solid transparent;
+    vertical-align: top;
+  }
+  .schedule-pane :global(.line)::before {
+    content: attr(data-line-number);
+    position: absolute;
+    left: 0.55rem;
+    top: 0;
+    width: 1.7rem;
+    font-size: 0.7rem;
+    line-height: 2.1875;
+    text-align: right;
+    text-indent: 0;
+    color: var(--schedule-muted);
+    user-select: none;
+    pointer-events: none;
+  }
+  cachet-schedule[data-wrap="true"] .schedule-pane :global(.line) {
+    width: 100%;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding-left: calc(3.2rem + var(--continuation-indent));
+    text-indent: calc(0px - var(--continuation-indent));
+  }
+  .schedule-pane :global(.line.is-changed) {
+    background: color-mix(in srgb, var(--matrix-first) 12%, transparent);
+    border-left-color: var(--matrix-first);
+  }
+  .schedule-pane :global(.line[data-future]) {
+    opacity: 0.5;
+  }
+  .schedule-pane :global(.line[data-link]) {
+    cursor: pointer;
+  }
+  .schedule-pane :global(.line[data-link]:focus-visible) {
+    outline: 1px solid var(--matrix-second);
+    outline-offset: -1px;
+  }
+  /* Keep the surrounding code readable while a link is being inspected. */
+  .schedule-panes.has-link :global(.line) {
+    opacity: 0.65;
+  }
+  .schedule-panes.has-link :global(.line[data-future]) {
+    opacity: 0.4;
+  }
+  .schedule-panes.has-link :global(.line.is-linked) {
+    opacity: 1;
+    background: color-mix(in srgb, var(--matrix-second) 18%, transparent);
+    border-left-color: var(--matrix-second);
+  }
+  .schedule-verdict {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: 0.5rem 1.1rem;
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--border);
+    color: var(--schedule-muted);
+  }
+  .schedule-claim-label {
+    font-size: 0.7rem;
+  }
+  :global(#article) .schedule-verdict :global(code) {
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+  }
+  .schedule-verdict.is-changed {
+    color: var(--foreground);
+    border-top-color: var(--matrix-first);
+  }
+  .schedule-inspection {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 1rem;
+    margin-top: 0.65rem;
+    min-height: 2.75rem;
+    font-size: 0.7rem;
+    color: var(--schedule-muted);
+  }
+  .schedule-inspection [data-selection] {
+    flex: 1;
+    min-width: 12rem;
+  }
+  cachet-schedule[data-expanded="true"] .schedule-panes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  :global(#article)
+    cachet-schedule[data-expanded="true"]
+    .schedule-pane
+    :global(pre) {
+    max-height: none;
+  }
+  /* Use the article's spare margin without reducing the type to fit it. */
+  @media (min-width: 1200px) {
+    cachet-schedule {
+      width: min(72rem, calc(50vw + 50% - 1.5rem));
+    }
+    .schedule-panes {
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+    }
+  }
+  @media (max-width: 600px) {
+    .schedule-tabs {
+      grid-auto-flow: row;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .schedule-picker {
+      align-items: stretch;
+      flex-direction: column;
+    }
+    .schedule-picker select {
+      width: 100%;
+    }
+    .schedule-toolbar {
+      gap: 0.3rem;
+    }
+    .schedule-options {
+      justify-content: space-between;
+      width: 100%;
+    }
+    .schedule-verdict {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .schedule-pane :global(.line) {
+      padding-left: 2.65rem;
+    }
+    .schedule-pane :global(.line)::before {
+      left: 0.25rem;
+      width: 1.5rem;
+    }
+    cachet-schedule[data-wrap="true"] .schedule-pane :global(.line) {
+      padding-left: calc(2.65rem + var(--continuation-indent));
+    }
+  }
+</style>

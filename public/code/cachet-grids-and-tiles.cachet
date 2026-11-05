@@ -1,0 +1,67 @@
+import "../../platforms/apple-silicon.cachet"
+use platform AppleSilicon
+
+fn double (reads x: [f32; 8]) (writes y: [f32; 8]) =
+  grid on M4Gpu i in 0 .. 8 writes y[i] do
+    y[i] = x[i] * 2.0
+
+fn scalar (reads a: [f32; 32, 32])
+          (reads b: [f32; 32, 32])
+          (writes c: [f32; 32, 32]) =
+  grid on M4Gpu i in 0 .. 32, j in 0 .. 32
+      writes c[i, j] as out do
+    var acc: f32 = 0.0
+    for k in 0 .. 32 do
+      let x: f32 = a[i, k]
+      let y: f32 = b[k, j]
+      acc = fma x y acc
+    out = acc
+
+fn tiled (reads a: [f32; 32, 32])
+         (reads b: [f32; 32, 32])
+         (writes c: [f32; 32, 32]) =
+  grid on M4Gpu gi in 0 .. 2, gj in 0 .. 2
+      by tile (si, sj) parts [8, 8]
+      writes c[gi * 16 .. gi * 16 + 16,
+               gj * 16 .. gj * 16 + 16] as ct do
+    var acc: [f32; 16, 16] = repeat 0.0
+    for k in 0 .. 4 do
+      let x: [f32; 16, 8] =
+        load a[gi * 16 .. gi * 16 + 16, k * 8 .. k * 8 + 8]
+      let y: [f32; 8, 16] =
+        load b[k * 8 .. k * 8 + 8, gj * 16 .. gj * 16 + 16]
+      acc = mma x y acc
+    store ct = acc
+
+export fn main =
+  let x = allocate @DRAM [1.5 : f32; 8]
+  let y = allocate @DRAM [0.0 : f32; 8]
+  double x y
+  print (y[7])
+  let a = allocate @DRAM [f32; 32, 32]
+  let b = allocate @DRAM [f32; 32, 32]
+  let c = allocate @DRAM [f32; 32, 32]
+  let d = allocate @DRAM [f32; 32, 32]
+  for i in 0 .. 32 do
+    for j in 0 .. 32 do
+      a[i, j] = ((i % 7) as f32) * 0.25 - ((j % 5) as f32) * 0.5
+      b[i, j] = ((j % 3) as f32) * 0.75 - ((i % 11) as f32) * 0.125
+      c[i, j] = 0.0
+      d[i, j] = 0.0
+  scalar a b c
+  tiled a b d
+  var differ: Nat = 0
+  for i in 0 .. 32 do
+    for j in 0 .. 32 do
+      let u: f32 = c[i, j]
+      let v: f32 = d[i, j]
+      if to_bits u != to_bits v then differ = differ + 1
+  print differ
+  print (c[17, 23])
+  print (d[17, 23])
+  release d
+  release c
+  release b
+  release a
+  release y
+  release x

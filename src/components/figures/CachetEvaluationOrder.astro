@@ -1,0 +1,217 @@
+---
+import {
+  additions,
+  chain,
+  grouped,
+  exampleLabels,
+  roundedSum,
+  label,
+} from "./evaluation-order.mjs";
+
+const k = 6;
+const trees = [
+  {
+    name: "chain",
+    title: "Left to right",
+    tree: chain(k),
+    note: "five dependent additions",
+  },
+  {
+    name: "grouped",
+    title: "Three partial sums",
+    tree: grouped(k, 2),
+    note: "three dependency levels",
+  },
+];
+const X = 40;
+const Y = 36;
+const x = (node: { x: number }) => 20 + node.x * X;
+const y = (node: { step: number }) => 200 - node.step * Y;
+---
+
+<cachet-evaluation-order class="gpu-figure not-prose">
+  <figure>
+    <figcaption class="sr-only">How addition order affects rounding</figcaption>
+    <p class="sr-only">
+      Each tree adds the same six <code>f32</code> values. Every + rounds to the nearest
+      representable value, with ties to even. The exact sum is 1.
+    </p>
+    <div class="order-controls" data-controls hidden>
+      <button type="button" data-move="-1" aria-label="Previous step"
+        >‹ Prev</button
+      >
+      <button type="button" data-play>Play</button>
+      <button type="button" data-move="1" aria-label="Next step">Next ›</button>
+    </div>
+    <div class="trees">
+      {
+        trees.map(({ name, title, tree, note }) => (
+          <div class:list={["tree", name]}>
+            <p class="tree-title">
+              <>
+                <strong>{title}</strong>
+                <span>{note}</span>
+              </>
+            </p>
+            <svg
+              viewBox="0 0 240 216"
+              role="img"
+              aria-label={`${title} ${note}: ${tree.step} steps`}
+            >
+              {additions(tree).map((node: any) => (
+                <g data-step={node.step} data-state="idle">
+                  <line
+                    x1={x(node)}
+                    y1={y(node)}
+                    x2={x(node.left)}
+                    y2={y(node.left)}
+                  />
+                  <line
+                    x1={x(node)}
+                    y1={y(node)}
+                    x2={x(node.right)}
+                    y2={y(node.right)}
+                  />
+                </g>
+              ))}
+              {additions(tree).map((node: any) => (
+                <g data-step={node.step} data-state="idle">
+                  <circle cx={x(node)} cy={y(node)} r="13" />
+                  <text class="op" x={x(node)} y={y(node)}>
+                    +
+                  </text>
+                  <text class="value" x={x(node)} y={y(node)}>
+                    {label(roundedSum(node))}
+                  </text>
+                </g>
+              ))}
+              {Array.from({ length: k }, (_, t) => (
+                <text class="leaf" x={20 + t * X} y="208">
+                  {exampleLabels[t]}
+                </text>
+              ))}
+            </svg>
+            <p class="tree-result" data-result data-complete-at={tree.step}>
+              Result: <strong>{roundedSum(tree)}</strong>
+            </p>
+          </div>
+        ))
+      }
+    </div>
+    <p class="order-caption" aria-live="polite" data-caption>
+      The chain gives 1; the grouped sum gives 0. Both perform five additions.
+      Dependency levels show which additions can run together, not measured
+      time.
+    </p>
+  </figure>
+</cachet-evaluation-order>
+
+<script>
+  import "./cachet-evaluation-order.js";
+</script>
+
+<style>
+  .order-controls {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+  }
+  .order-controls[hidden] {
+    display: none;
+  }
+  .trees {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+    gap: 1rem;
+  }
+  .tree-title {
+    margin: 0 0 0.25rem;
+    font-size: 0.8rem;
+  }
+  .tree-title span {
+    display: block;
+  }
+  .tree-result {
+    margin: 0.5rem 0 0;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    color: var(--tree);
+  }
+  .tree-result[data-pending] strong {
+    visibility: hidden;
+  }
+  .tree-result[data-pending]::after {
+    content: "…";
+  }
+  .chain {
+    --tree: var(--matrix-first);
+  }
+  .grouped {
+    --tree: var(--matrix-second);
+  }
+  svg {
+    display: block;
+    width: 100%;
+  }
+  line {
+    stroke: var(--border);
+    stroke-width: 1.5;
+    transition: stroke 200ms;
+  }
+  circle {
+    fill: var(--background);
+    stroke: var(--border);
+    stroke-width: 1.5;
+    transition:
+      fill 200ms,
+      stroke 200ms;
+  }
+  text {
+    fill: var(--foreground);
+    font: 13px var(--font-code);
+    text-anchor: middle;
+    dominant-baseline: central;
+  }
+  .leaf {
+    font-size: 10px;
+  }
+  /* An addition shows its + until it's computed, then its rounded result. */
+  .value {
+    font-size: 10px;
+    visibility: hidden;
+  }
+  [data-state="current"] .value,
+  [data-state="done"] .value {
+    visibility: visible;
+  }
+  [data-state="current"] .op,
+  [data-state="done"] .op {
+    visibility: hidden;
+  }
+  [data-state="done"] line,
+  [data-state="done"] circle,
+  [data-state="current"] line,
+  [data-state="current"] circle {
+    stroke: var(--tree);
+  }
+  [data-state="done"] circle {
+    fill: color-mix(in srgb, var(--tree) 30%, var(--background));
+  }
+  [data-state="current"] circle {
+    fill: var(--tree);
+  }
+  [data-state="current"] text {
+    fill: var(--background);
+  }
+  .order-caption {
+    margin: 0.75rem 0 0;
+    min-height: 4.8em;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    line,
+    circle {
+      transition: none;
+    }
+  }
+</style>

@@ -1,0 +1,160 @@
+---
+const cells = Array.from({ length: 16 }, (_, index) => ({
+  row: Math.floor(index / 4),
+  col: index % 4,
+}));
+---
+
+<cachet-phases class="gpu-figure not-prose">
+  <figure>
+    <figcaption>A tile changes hands twice</figcaption>
+    <p class="figure-intro">
+      Access from thread (1, 2), in one group. All 16 threads follow the same
+      phases. Two input tiles contribute to the same accumulator.
+    </p>
+    <ol class="phase-steps">
+      <li data-phase="0" aria-current="step"><span>1</span> Fill your cells</li>
+      <li data-phase="1"><span>2</span> First barrier</li>
+      <li data-phase="2"><span>3</span> Read the tiles</li>
+      <li data-phase="3"><span>4</span> Second barrier</li>
+    </ol>
+    <div class="phase-tiles">
+      {
+        ["ta", "tb"].map(name => (
+          <div class={`phase-${name}`}>
+            <p class="buffer-name">{name}</p>
+            <div
+              class="shared-tile"
+              data-buffer={name}
+              role="img"
+              aria-label={`${name}: thread 1, 2 may access only its own cell while filling`}
+            >
+              {cells.map(({ row, col }) => (
+                <span
+                  data-row={row}
+                  data-col={col}
+                  data-allowed={row === 1 && col === 2 ? "true" : "false"}
+                  data-used={row === 1 && col === 2 ? "true" : "false"}
+                >
+                  {row === 1 && col === 2 ? "W" : ""}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+      <div class="phase-acc">
+        <p class="buffer-name">acc</p><div
+          class="phase-acc-cell"
+          data-acc
+          role="img"
+          aria-label="Private accumulator for output 1, 2"
+        >
+        </div>
+      </div>
+    </div>
+    <p data-description class="phase-description" aria-live="polite">
+      Each thread fills its own cell in ta and tb. This thread writes ta[1, 2]
+      and tb[1, 2]. It cannot read a neighbour’s cell yet.
+    </p>
+    <div class="figure-controls">
+      <button type="button" data-previous disabled>Previous</button>
+      <button type="button" data-next disabled>Next phase →</button>
+    </div>
+    <p class="figure-note">
+      W: this thread’s write window. R: values it reads in the dot product. In
+      the read phase, the light cells are also readable. The barriers wait for
+      the whole group.
+    </p>
+  </figure>
+</cachet-phases>
+
+<script>
+  import "./cachet-tile-motion.js";
+</script>
+
+<style>
+  .phase-steps {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+  }
+  .phase-steps li {
+    border-top: 2px solid var(--border);
+    padding-top: 0.5rem;
+    font-size: 0.8rem;
+  }
+  .phase-steps span {
+    display: block;
+    font-family: var(--font-code);
+    margin-bottom: 0.35rem;
+  }
+  .phase-steps [aria-current] {
+    border-color: var(--figure-accent);
+    font-weight: 600;
+  }
+  .phase-tiles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas: ". b" "a acc";
+    align-items: start;
+    gap: 1.25rem;
+    width: min(100%, 22rem);
+    margin: 1.25rem auto;
+  }
+  .phase-ta {
+    grid-area: a;
+  }
+  .phase-tb {
+    grid-area: b;
+  }
+  .phase-acc {
+    display: flex;
+    flex-direction: column;
+    grid-area: acc;
+  }
+  .phase-acc .buffer-name {
+    margin-left: calc((100% + 2px) / 2);
+  }
+  .phase-acc-cell {
+    width: calc((100% - 6px) / 4);
+    margin-left: calc((100% + 2px) / 2);
+    margin-top: calc((100% + 2px) / 4);
+    aspect-ratio: 1;
+    background: var(--matrix-idle);
+  }
+  .buffer-name {
+    font-family: var(--font-code);
+    margin: 0 0 0.5rem;
+  }
+  .shared-tile {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 0;
+  }
+  .shared-tile span {
+    aspect-ratio: 1;
+    border: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-code);
+  }
+  [data-allowed="true"] {
+    background: color-mix(in srgb, var(--figure-accent) 12%, var(--background));
+  }
+  [data-used="true"] {
+    background: var(--figure-accent);
+    color: var(--background);
+  }
+  .phase-description {
+    min-height: 6em;
+  }
+  @media (max-width: 420px) {
+    .phase-steps {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

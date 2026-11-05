@@ -1,0 +1,184 @@
+---
+import { cacheModel as model } from "./cache-model.mjs";
+
+const walks = [
+  {
+    name: "rows",
+    title: "Along the rows",
+    code: "for j",
+    note: "The next read is the next element.",
+  },
+  {
+    name: "columns",
+    title: "Down the columns",
+    code: "for k",
+    note: "The next read is a whole row ahead.",
+  },
+];
+const cells = Array.from({ length: model.rows * model.cols }, (_, n) => n);
+---
+
+<cachet-cache-lines class="gpu-figure matrix-figure not-prose">
+  <figure>
+    <p class="figure-intro">
+      Each row of squares is a row of <code>b</code>, and each group of four is
+      one cache line. In this model, a cached read takes 1 tick and a miss takes{
+        " "
+      }
+      {model.missCost} ticks. Reads run one at a time, without prefetching.
+    </p>
+    <div class="matrix-playback cache-controls" data-controls hidden>
+      <button type="button" data-play aria-pressed="false" disabled>Play</button
+      >
+      <span class="matrix-status" data-clock>Time 0</span>
+    </div>
+    <div class="cache-walks">
+      {
+        walks.map(walk => (
+          <section data-walk={walk.name}>
+            <p class="walk-title">
+              <strong>{walk.title}</strong>
+              <span>
+                inner loop <code>{walk.code}</code>
+              </span>
+            </p>
+            <div
+              class="cache-cells"
+              role="img"
+              aria-label={`Eight by eight matrix. ${walk.note}`}
+            >
+              {cells.map(index => (
+                <span
+                  data-cell
+                  data-state="idle"
+                  style={{
+                    gridColumn: (index % 8) + (index % 8 < 4 ? 1 : 2),
+                    gridRow: Math.floor(index / 8) + 1,
+                  }}
+                />
+              ))}
+              <i class="cache-focus" aria-hidden="true" />
+            </div>
+            <p class="walk-status" data-status>
+              {walk.note}
+            </p>
+          </section>
+        ))
+      }
+    </div>
+    <p class="matrix-legend cache-legend">
+      <span
+        ><span class="key" data-state="cached" aria-hidden="true"></span>In the
+        cache</span
+      >
+      <span
+        ><span class="key" data-state="current" aria-hidden="true"></span>Being
+        read</span
+      >
+      <span
+        ><span class="key" data-state="stalled" aria-hidden="true"
+        ></span>Waiting for memory</span
+      >
+    </p>
+    <p class="figure-note matrix-summary">
+      This <a href="#panel-cache">cache model</a> holds {model.capacity} lines and
+      evicts the least recently used line, so a column of 8 pushes out each line before
+      the walk returns to it.
+    </p>
+  </figure>
+</cachet-cache-lines>
+
+<script>
+  import "./cachet-cache-lines.js";
+</script>
+
+<style>
+  .cache-controls[hidden] {
+    display: none;
+  }
+  .cache-walks {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+  @media (max-width: 520px) {
+    .cache-walks {
+      grid-template-columns: 1fr;
+    }
+  }
+  .walk-title,
+  .walk-status {
+    margin: 0;
+  }
+  .walk-title {
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+  .walk-title span {
+    display: block;
+    color: var(--matrix-muted);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+  }
+  .walk-status {
+    margin-top: 0.75rem;
+    min-height: 3.2em;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .cache-cells {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) 0.4rem repeat(
+        4,
+        minmax(0, 1fr)
+      );
+    gap: 2px;
+    width: min(100%, 20rem);
+    margin-top: 0.85rem;
+  }
+  .cache-cells > [data-cell] {
+    aspect-ratio: 1;
+    border-radius: 2px;
+  }
+  .cache-focus {
+    position: absolute;
+    left: 0;
+    top: 0;
+    pointer-events: none;
+    outline: 1px solid var(--foreground);
+    outline-offset: 2px;
+    transition: transform 70ms ease-out;
+  }
+  [data-state] {
+    background: var(--matrix-idle);
+  }
+  [data-state="cached"] {
+    background: color-mix(in srgb, var(--matrix-first) 35%, var(--matrix-idle));
+  }
+  [data-state="current"] {
+    background: var(--matrix-first);
+  }
+  [data-state="fetching"] {
+    background: color-mix(
+      in srgb,
+      var(--matrix-second) 35%,
+      var(--matrix-idle)
+    );
+  }
+  [data-state="stalled"] {
+    background: var(--matrix-second);
+  }
+  .key {
+    flex: none;
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cache-focus {
+      transition: none;
+    }
+  }
+</style>

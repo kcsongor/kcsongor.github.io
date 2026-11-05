@@ -1,0 +1,400 @@
+.gpu-figure {
+  display: block;
+  margin: 2rem 0;
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.gpu-figure figure {
+  margin: 0;
+}
+.attention-equation {
+  margin: 1.5rem 0;
+  text-align: center;
+  font-size: clamp(1rem, 3vw, 1.3rem);
+  overflow-x: auto;
+}
+.gpu-figure figcaption {
+  font-weight: 600;
+  font-size: 1rem;
+}
+.gpu-figure .figure-intro {
+  margin: 0.4rem 0 1rem;
+}
+.gpu-figure .figure-note {
+  font-size: 0.8rem;
+  margin: 1rem 0 0;
+}
+.gpu-figure label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.gpu-figure input[type="range"] {
+  accent-color: var(--figure-accent);
+  flex: 1;
+  min-width: 8rem;
+  min-height: 2.75rem;
+}
+.gpu-figure .figure-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+.gpu-figure button {
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0.45rem 0.8rem;
+  min-height: 2.75rem;
+  font: inherit;
+  cursor: pointer;
+}
+.gpu-figure button[aria-pressed="true"] {
+  border-color: var(--foreground);
+  box-shadow: inset 0 -2px var(--foreground);
+  font-weight: 600;
+}
+.gpu-figure button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.gpu-figure :focus-visible {
+  outline: 2px solid var(--figure-accent);
+  outline-offset: 3px;
+}
+
+/* The article's generic details styling hides paragraph children. Keep the
+   benchmark methods readable and selectable when this disclosure is open. */
+/* Shared palette and flat cells for all matrix illustrations. */
+.gpu-figure,
+.cachet-timing {
+  --matrix-first: #326ac8;
+  --matrix-second: #bf4388;
+  --matrix-third: #8563c7;
+  --matrix-sum: color-mix(
+    in srgb,
+    var(--matrix-first) 50%,
+    var(--matrix-second)
+  );
+  --matrix-idle: color-mix(in srgb, var(--foreground) 10%, var(--background));
+}
+[data-theme="dark"] .gpu-figure,
+[data-theme="dark"] .cachet-timing {
+  --matrix-first: #72a7fa;
+  --matrix-second: #ed8dbb;
+  --matrix-third: #bda0f4;
+}
+
+/* Matrix figures share the blocking figure's reading order: explanation,
+   controls, diagram, then the result or comparison. */
+.matrix-figure {
+  --matrix-muted: color-mix(in srgb, var(--foreground) 65%, var(--background));
+  padding-block: 1.5rem;
+}
+.matrix-figure figcaption {
+  font-size: clamp(1.2rem, 3vw, 1.55rem);
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+.matrix-figure .figure-intro {
+  color: var(--matrix-muted);
+  margin: 0.5rem 0 1.25rem;
+}
+.matrix-figure .figure-note {
+  color: var(--matrix-muted);
+  font-size: 0.75rem;
+  line-height: 1.65;
+}
+.matrix-figure .matrix-chapters {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.15rem;
+}
+.matrix-figure .matrix-chapters button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  padding: 0.65rem 0.35rem 0.75rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  text-align: left;
+  line-height: 1.35;
+  font-size: 0.8rem;
+  color: var(--matrix-muted);
+  background: transparent;
+}
+.matrix-figure .matrix-chapters button[aria-pressed="true"] {
+  color: var(--foreground);
+  border-bottom-color: var(--matrix-first);
+  box-shadow: none;
+}
+.matrix-step-number {
+  font-size: 0.65rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+.matrix-figure .matrix-story {
+  min-height: 5rem;
+}
+.matrix-figure .matrix-story strong {
+  font-size: 1rem;
+  line-height: 1.45;
+}
+.matrix-figure .matrix-story p {
+  color: var(--matrix-muted);
+  font-size: 0.85rem;
+  margin: 0.3rem 0 0;
+}
+.matrix-figure .matrix-playback {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0.6rem 0 1rem;
+  flex-wrap: wrap;
+}
+.matrix-figure .matrix-playback > button {
+  min-width: 5rem;
+  border-radius: 4px;
+}
+.matrix-figure .matrix-playback > button[aria-pressed="true"] {
+  box-shadow: none;
+}
+.matrix-figure .matrix-status {
+  flex: 1;
+  min-width: 8rem;
+  font-size: 0.75rem;
+  color: var(--matrix-muted);
+  font-variant-numeric: tabular-nums;
+}
+.matrix-figure .matrix-navigation {
+  display: flex;
+  gap: 0.25rem;
+}
+.matrix-figure .matrix-navigation button {
+  border: 0;
+  padding-inline: 0.45rem;
+  font-size: 0.75rem;
+  color: var(--matrix-muted);
+}
+.matrix-figure .matrix-scrub {
+  font-size: 0.75rem;
+}
+.matrix-figure .matrix-scrub[open] {
+  flex: 1 0 100%;
+}
+.matrix-figure .matrix-scrub summary {
+  cursor: pointer;
+}
+.matrix-figure .matrix-scrub label {
+  margin-top: 0.5rem;
+}
+.matrix-context {
+  text-align: center;
+  align-self: center;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--matrix-muted);
+}
+.matrix-context .matrix-kicker {
+  display: block;
+  font-size: 0.7rem;
+}
+.matrix-context strong {
+  display: block;
+  color: var(--foreground);
+  font-size: clamp(1.25rem, 4vw, 2rem);
+  font-weight: 500;
+  margin-block: 0.25rem;
+}
+.matrix-context p {
+  margin: 0;
+}
+.matrix-figure .matrix-reading {
+  text-align: center;
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.matrix-figure .matrix-reading p {
+  margin: 0.3rem 0;
+}
+.matrix-figure .matrix-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
+  margin-top: 0.8rem;
+  font-size: 0.7rem;
+  color: var(--matrix-muted);
+}
+.matrix-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.matrix-key {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 2px;
+  display: inline-block;
+}
+.matrix-key-first {
+  background: var(--matrix-first);
+}
+.matrix-key-second {
+  background: var(--matrix-second);
+}
+.matrix-key-third {
+  background: var(--matrix-third);
+}
+.matrix-key-sum {
+  background: var(--matrix-sum);
+}
+.matrix-figure[data-mode="split"] [data-legend-kind="pair"],
+.matrix-figure:not([data-mode="split"]) [data-legend-kind="split"] {
+  display: none;
+}
+.matrix-figure .matrix-summary {
+  border-top: 1px solid var(--border);
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  font-size: 0.85rem;
+}
+.matrix-figure .matrix-summary p {
+  margin: 0.4rem 0 0;
+}
+@media (max-width: 480px) {
+  .matrix-figure .matrix-chapters button {
+    font-size: 0.7rem;
+  }
+  .matrix-context {
+    font-size: 0.65rem;
+  }
+  .matrix-context .matrix-kicker {
+    font-size: 0.6rem;
+  }
+}
+.gpu-figure :is(.matmul-layout, .operand-layout, .phase-tiles) {
+  position: relative;
+  isolation: isolate;
+}
+.gpu-figure .matrix-motion {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+}
+.gpu-figure
+  :is(
+    .matmul-cells > [data-row],
+    .operand-blocks > [data-block],
+    .shared-tile > [data-row],
+    .phase-acc-cell
+  ) {
+  position: relative;
+}
+.gpu-figure .matrix-arrival {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 0;
+}
+.gpu-figure .matrix-cell-label {
+  position: relative;
+  z-index: 1;
+}
+.gpu-figure :is(.matmul-cells, .shared-tile, .operand-blocks) {
+  border: 0;
+  gap: 2px;
+}
+.gpu-figure
+  :is(
+    .matmul-cells > [data-row],
+    .matrix-c button,
+    .shared-tile > [data-row],
+    .operand-blocks > [data-block]
+  ) {
+  border: 0;
+  border-radius: 3px;
+  background: var(--matrix-idle);
+  box-shadow: none;
+  color: var(--foreground);
+  transition: background-color 240ms ease-out;
+}
+.gpu-figure .matrix-arrival {
+  border-radius: inherit;
+}
+.gpu-figure .matrix-c button[aria-pressed="true"] {
+  box-shadow: none;
+}
+.gpu-figure .matmul-index [data-active="true"] {
+  color: var(--foreground);
+}
+.gpu-figure .matmul-cells {
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-auto-rows: auto;
+}
+.gpu-figure .matmul-cells > [data-row] {
+  aspect-ratio: 1;
+}
+.gpu-figure .matrix-focus {
+  transition: opacity 180ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gpu-figure .matrix-focus,
+  .gpu-figure
+    :is(
+      .matmul-cells > [data-row],
+      .matrix-c button,
+      .shared-tile > [data-row],
+      .operand-blocks > [data-block]
+    ) {
+    transition: none;
+  }
+}
+
+/* Variables in code, coloured by how often they change (transformerHeat). */
+:root {
+  --heat-cold: #1f4fa8;
+  --heat-warm: #8f5600;
+  --heat-hot: #c32a16;
+}
+[data-theme="dark"] {
+  --heat-cold: #72a7fa;
+  --heat-warm: #e0b050;
+  --heat-hot: #ff6b4a;
+}
+.astro-code :is(.heat-none, .heat-none span) {
+  color: var(--foreground) !important;
+}
+.astro-code :is(.heat-cold, .heat-cold span) {
+  color: var(--heat-cold) !important;
+  font-weight: 600;
+}
+.astro-code :is(.heat-warm, .heat-warm span) {
+  color: var(--heat-warm) !important;
+  font-weight: 600;
+}
+.astro-code :is(.heat-hot, .heat-hot span) {
+  color: var(--heat-hot) !important;
+  font-weight: 700;
+}
+code.heat-text-cold {
+  color: var(--heat-cold);
+}
+code.heat-text-warm {
+  color: var(--heat-warm);
+}
+code.heat-text-hot {
+  color: var(--heat-hot);
+  font-weight: 700;
+}

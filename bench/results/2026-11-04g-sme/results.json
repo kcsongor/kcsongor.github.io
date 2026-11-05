@@ -1,0 +1,227 @@
+[
+  {
+    "name": "sme",
+    "n": 3072,
+    "median_s": 0.067401458,
+    "min_s": 0.067266208,
+    "gflops": 860.25,
+    "reps": 15,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU matrix units, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s1",
+    "n": 3072,
+    "median_s": 62.386226459,
+    "min_s": 61.930097,
+    "gflops": 0.93,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s1"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s2",
+    "n": 3072,
+    "median_s": 61.876991917,
+    "min_s": 61.735404041,
+    "gflops": 0.94,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s2"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s3",
+    "n": 3072,
+    "median_s": 63.067503541,
+    "min_s": 62.627628334,
+    "gflops": 0.92,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s3"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s4",
+    "n": 3072,
+    "median_s": 48.650123209,
+    "min_s": 48.605595875,
+    "gflops": 1.19,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s4"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s5",
+    "n": 3072,
+    "median_s": 28.797851916,
+    "min_s": 26.425253458,
+    "gflops": 2.01,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s5"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s6",
+    "n": 3072,
+    "median_s": 32.895088125,
+    "min_s": 32.861840167,
+    "gflops": 1.76,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s6"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s7",
+    "n": 3072,
+    "median_s": 33.041838667,
+    "min_s": 33.005703792,
+    "gflops": 1.75,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s7"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s8",
+    "n": 3072,
+    "median_s": 33.919667417,
+    "min_s": 33.004270042,
+    "gflops": 1.71,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s8"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s9",
+    "n": 3072,
+    "median_s": 15.13853675,
+    "min_s": 15.083126709,
+    "gflops": 3.83,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s9"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s10",
+    "n": 3072,
+    "median_s": 15.0353595,
+    "min_s": 14.81688875,
+    "gflops": 3.86,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s10"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s11",
+    "n": 3072,
+    "median_s": 14.800118666,
+    "min_s": 14.788510791,
+    "gflops": 3.92,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s11"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s12",
+    "n": 3072,
+    "median_s": 14.984227958,
+    "min_s": 14.8956225,
+    "gflops": 3.87,
+    "reps": 3,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s12"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "sme_s13",
+    "n": 3072,
+    "median_s": 1.379474209,
+    "min_s": 1.37064625,
+    "gflops": 42.03,
+    "reps": 5,
+    "check": "bits",
+    "element": "f64",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/sme_s13"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "accelerate_f64",
+    "n": 3072,
+    "median_s": 0.067710667,
+    "min_s": 0.067204917,
+    "gflops": 856.32,
+    "reps": 15,
+    "check": "close",
+    "element": "f64",
+    "where": "CPU matrix unit",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04g-sme/build/3072/accelerate_f64"
+    ],
+    "environment": {}
+  }
+]

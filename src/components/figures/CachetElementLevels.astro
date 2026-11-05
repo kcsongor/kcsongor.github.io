@@ -1,0 +1,195 @@
+---
+// The 16 × 16 output tile of `tiled`, seen at three element types. Selecting
+// a level highlights one element of that type: a number, an 8 × 8 block,
+// or the whole tile of four blocks.
+const levels = [
+  {
+    title: "One number",
+    type: "f32",
+    what: "One output, a single f32. Its chain adds one product per step of k.",
+  },
+  {
+    title: "An 8 × 8 block",
+    type: "[f32; 8, 8]",
+    what: "One 8 × 8 block: one SIMD group's part of the tile. Each simdgroup_mma8 adds eight steps of k to all 64 outputs at once.",
+  },
+  {
+    title: "The whole tile",
+    type: "[[f32; 8, 8]; 2, 2]",
+    what: "The whole 16 × 16 tile: one grid iteration, a 2 × 2 matrix of blocks shared out among four SIMD groups.",
+  },
+];
+// Which levels a cell belongs to, for cell `cell` of block `block`: the first
+// cell of the first block, the first block, and the whole tile.
+const levelOf = (block: number, cell: number) => [
+  block === 0 && cell === 0,
+  block === 0,
+  true,
+];
+---
+
+<cachet-element-levels
+  class="gpu-figure matrix-figure not-prose"
+  data-level="1"
+>
+  <figure>
+    <figcaption class="sr-only">One element at three matrix types</figcaption>
+    <div class="matrix-chapters" role="group" aria-label="Element size">
+      {
+        levels.map((level, at) => (
+          <button
+            type="button"
+            data-level-button={at}
+            aria-pressed={at === 1 ? "true" : "false"}
+          >
+            <span>{level.title}</span>
+          </button>
+        ))
+      }
+    </div>
+    <div
+      class="levels-detail"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <strong><code data-type>{levels[1].type}</code></strong>
+      <p data-detail>{levels[1].what}</p>
+    </div>
+    <div class="levels-layout">
+      <div
+        class="levels-tile"
+        role="img"
+        aria-label="A 16 by 16 output tile, made of four 8 by 8 blocks"
+      >
+        {
+          [0, 1, 2, 3].map(block => (
+            <div class="levels-block">
+              {Array.from({ length: 64 }, (_, cell) => (
+                <span
+                  data-in={levelOf(block, cell)
+                    .map((inside, at) => (inside ? at : null))
+                    .filter(at => at !== null)
+                    .join(" ")}
+                />
+              ))}
+            </div>
+          ))
+        }
+        <div class="levels-focus" aria-hidden="true"></div>
+      </div>
+    </div>
+    <template data-details>{JSON.stringify(levels)}</template>
+  </figure>
+</cachet-element-levels>
+
+<script>
+  class ElementLevels extends HTMLElement {
+    connectedCallback() {
+      const details = JSON.parse(
+        this.querySelector("template[data-details]")?.innerHTML ?? "[]"
+      );
+      const buttons = [
+        ...this.querySelectorAll<HTMLButtonElement>("[data-level-button]"),
+      ];
+      const detail = this.querySelector("[data-detail]");
+      const show = (level: number) => {
+        this.dataset.level = String(level);
+        buttons.forEach((button, at) =>
+          button.setAttribute("aria-pressed", String(at === level))
+        );
+        if (detail) detail.textContent = details[level].what;
+        this.querySelector("[data-type]")!.textContent = details[level].type;
+        this.querySelector("[role=img]")!.setAttribute(
+          "aria-label",
+          details[level].what
+        );
+      };
+      buttons.forEach((button, at) => {
+        button.addEventListener("click", () => show(at));
+      });
+    }
+  }
+  if (!customElements.get("cachet-element-levels"))
+    customElements.define("cachet-element-levels", ElementLevels);
+</script>
+
+<style>
+  .levels-detail {
+    margin-top: 0.8rem;
+    min-height: 6em;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .levels-detail p { margin: 0.3rem 0 0; }
+  .levels-layout {
+    width: min(100%, 26rem);
+    margin: 1rem auto;
+  }
+  /* Four 8 × 8 blocks in a square, with gaps between the blocks. Nothing
+     here sizes a cell by its own aspect ratio, so rows can't outgrow it. */
+  .levels-tile {
+    --block-gap: clamp(0.35rem, 1.5vw, 0.75rem);
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--block-gap);
+    width: 100%;
+    aspect-ratio: 1;
+  }
+  .levels-block {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-rows: repeat(8, minmax(0, 1fr));
+    gap: 1px;
+    min-height: 0;
+  }
+  .levels-block > span {
+    border-radius: 2px;
+    background: var(--matrix-idle);
+    transition: background-color 350ms;
+  }
+  cachet-element-levels[data-level="0"] [data-in~="0"],
+  cachet-element-levels[data-level="1"] [data-in~="1"],
+  cachet-element-levels[data-level="2"] [data-in~="2"] {
+    background: var(--matrix-first);
+  }
+  /* The tile's other blocks are the same element type, so they're tinted. */
+  cachet-element-levels[data-level="1"] [data-in~="2"]:not([data-in~="1"]) {
+    background: color-mix(in srgb, var(--matrix-first) 25%, var(--matrix-idle));
+  }
+  .levels-detail {
+    min-height: 6rem;
+  }
+  .levels-focus {
+    position: absolute;
+    pointer-events: none;
+    left: 0;
+    top: 0;
+    width: calc((100% - var(--block-gap)) / 2);
+    height: calc((100% - var(--block-gap)) / 2);
+    outline: 1px solid var(--foreground);
+    outline-offset: 3px;
+    transition:
+      width 450ms,
+      height 450ms;
+  }
+  [data-level="0"] .levels-focus {
+    width: calc((100% - var(--block-gap) - 14px) / 16);
+    height: calc((100% - var(--block-gap) - 14px) / 16);
+  }
+  [data-level="2"] .levels-focus {
+    width: 100%;
+    height: 100%;
+  }
+  @media (max-width: 480px) {
+    .levels-detail {
+      min-height: 8rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .levels-block > span,
+    .levels-focus {
+      transition: none;
+    }
+  }
+</style>

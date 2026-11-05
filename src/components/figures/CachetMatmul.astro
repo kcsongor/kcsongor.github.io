@@ -1,0 +1,74 @@
+---
+import MatmulGrid from "./MatmulGrid.astro";
+import MatrixPlayback from "./MatrixPlayback.astro";
+import MatrixLegend from "./MatrixLegend.astro";
+
+// A is m × k, B is k × n, C is m × n. Keeping the three dimensions distinct
+// makes it easier to tell which index is which.
+const m = 4;
+const k = 6;
+const n = 5;
+---
+
+<cachet-matmul
+  class="gpu-figure matrix-figure not-prose"
+  data-i="0"
+  data-j="0"
+  data-k="0"
+  data-m={m}
+  data-n={n}
+  data-k-size={k}
+>
+  <figure>
+    <figcaption class="sr-only">Computing one output element</figcaption>
+    <p class="figure-intro">
+      Choose an output in C to follow its six products.
+    </p>
+    <MatrixPlayback />
+    <MatmulGrid m={m} k={k} n={n} selectable>
+      <div class="matrix-context">
+        <span class="matrix-kicker">Current output</span>
+        <strong data-output-label>C[0, 0]</strong>
+        <p data-output-sources>Row 0 of A<br />column 0 of B</p>
+      </div>
+    </MatmulGrid>
+    <div class="matrix-reading matmul-formula" aria-live="polite">
+      <p data-formula></p>
+      <p data-count></p>
+    </div>
+    <MatrixLegend />
+    <p class="figure-note">
+      C is drawn below B and to the right of A, so that the row and column
+      feeding an output line up with it. Nothing here depends on any other
+      output. Keeping each output's multiply-adds in order preserves its result;
+      regrouping them can change floating-point rounding.
+    </p>
+  </figure>
+</cachet-matmul>
+
+<script>
+  import "./cachet-matmul.js";
+</script>
+
+<style>
+  [data-output-sources] {
+    white-space: pre-line;
+  }
+  .matmul-formula {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.8rem;
+    margin: 0.5rem 0 0;
+    text-align: center;
+  }
+  [data-formula] {
+    min-height: 3.2em;
+  }
+  [data-count] {
+    color: var(--matrix-muted);
+  }
+  @media (min-width: 640px) {
+    [data-formula] {
+      min-height: 1.6em;
+    }
+  }
+</style>

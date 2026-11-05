@@ -1,0 +1,202 @@
+// The examples from "Write your own kernel optimiser". One
+// contraction over any semiring is laid out as a grid of threads,
+// with its inner loops swapped, as a tile grid at `PlusTimes f32`,
+// as a cache-blocked tower with and without packing, and on the M4's matrix
+// unit. `fast`, `bands`, `sme` and `big_tiles`, the full-size schedules,
+// need sizes their blocks divide, so `main` leaves them to the benchmark
+// (bench/run.py), which checks their bits. `main` prints an element of the
+// product, then how many elements of each schedule's result differ in their
+// bits from `matmul`'s (0, 0, 0, 0, 0), then the shortest path from node 0
+// to node 2 of a ring by `matmul` at `MinPlus f32`.
+module (platform = AppleSilicon)
+import "../../platforms/apple-silicon.cachet"
+import "cachet:monoid"
+import "cachet:simd"
+import "cachet:steps"
+import "../../examples/lib/panel-major.cachet"
+
+contraction matmul {S : Semiring}
+    (reads a: [S.Value; M, K])
+    (reads b: [S.Value; K, N])
+    -> out c: [S.Value; M, N] =
+  c[i, j] = sum k. a[i, k] * b[k, j]
+
+schedule rows of matmul on M4Gpu =
+  grid over (i, j)
+
+schedule swapped of matmul =
+  zero (i, j) c
+  hoist (j, k) c
+
+schedule tiled of matmul @(S = PlusTimes f32) on M4Gpu =
+  grid over (i, j)
+  tiles (i, j, k) (16, 16) (8, 8)
+
+schedule fn block_product (i, j, k) c (MC, MR, NC, KC) =
+  zero (i, j) c
+  split k by KC as gk ragged
+  split i by MC as gi, MR as ui ragged
+  split j by NC as gj ragged
+  order (gk, gj, gi, ui, i, j)
+
+schedule tower of matmul =
+  block_product (i, j, k) c (16, 4, 8, 16)
+
+schedule packed of matmul @(S = PlusTimes f32)
+    (mut packA: [f32; 16, 16] in PanelMajor 4 at DRAM)
+    (mut packB: [f32; 16, 8] at DRAM) =
+  block_product (i, j, k) c (16, 4, 8, 16)
+  pack a into packA along gi over (a0, a1)
+  keep packA along gi within L2 into packA_L2
+  pack b into packB along gj over (b0, b1)
+  keep packB along gj within L1 into packB_L1
+  registers (i, j) into c rows 4 lanes 8 through fma
+
+// "Making it fast": `packed` with larger blocks, rows first, and a
+// register tile wide enough for the M4's four FMA pipes, then the same on
+// every core, and `tiled` with larger tiles.
+const MR : Nat = 4
+const NR : Nat = 16
+
+proof enough_chains =
+  assert MR * ceil (NR / platform.lanes @Vec @f32) >=
+    platform.fma_pipes @Vec * platform.fma_latency @Vec
+
+schedule fast of matmul @(S = PlusTimes f32)
+    (mut packA: [f32; 512, 256] in PanelMajor MR at DRAM)
+    (mut packB: [f32; 256, NR] at DRAM) =
+  zero (i, j) c
+  split k by 256 as gk ragged
+  split i by 512 as gi, MR as ui ragged
+  split j by NR as gj ragged
+  order (gk, gi, gj, ui, i, j)
+  pack a into packA along gi over (a0, a1)
+  strip_blocks_ragged a0 MR (pa, ra)
+  interchange (ra, a1)
+  keep packA along gi within L2 into packA_L2
+  pack b into packB along gj over (b0, b1)
+  keep packB along gj within L1 into packB_L1
+  registers (i, j) into c rows MR lanes NR through fma
+
+// Column panels: columns in groups of `P`, each group's rows one after
+// another, so a group's row is `P` contiguous values.
+layout ColumnPanels (P : Nat) where
+
+impl Layout2D A Rows Cols for ColumnPanels P requires 0 < P, Cols % P == 0 where
+  fn byte_offset i j = sizeof A * (floor (j / P) * (Rows * P) + i * P + j % P)
+  const allocation_bytes = sizeof A * (floor (Cols / P) * Rows) * P
+
+schedule sme of matmul @(S = PlusTimes f64)
+    (mut packA: [f64; M, 3072] in PanelMajor 32)
+    (mut packB: [f64; 3072, 256] in ColumnPanels 16 at DRAM) =
+  split k by 3072 as gk ragged
+  split j by 256 as gj, 16 as uj
+  split i by 1536 as gi, 32 as ui
+  order (gk, gj, gi, ui, uj, i, j)
+  parallel gi
+  pack a into packA along gk over (a0, a1)
+  strip a0 32 (pa, ra)
+  parallel pa
+  pack b into packB along gj over (b0, b1)
+  strip b1 16 (pb, rb)
+  interchange (b0, pb)
+  parallel pb
+  registers (i, j) into c rows 32 lanes 16 through fma
+  outer_products i c 8 8 outer_fma_primitive
+
+schedule bands of matmul @(S = PlusTimes f32)
+    (mut packA: [f32; M, 256] in PanelMajor 4)
+    (mut packB: [f32; 256, 1024] in ColumnPanels 16 at DRAM) =
+  zero (i, j) c
+  split k by 256 as gk ragged
+  split j by 1024 as gj, 16 as uj ragged
+  split i by 64 as gi, 4 as ui
+  order (gk, gj, gi, ui, uj, i, j)
+  parallel gi
+  pack a into packA along gk over (a0, a1)
+  strip a0 4 (pa, ra)
+  interchange (ra, a1)
+  parallel pa
+  pack_lanes b into packB along gj over (b0, b1, bt) lanes 16
+  keep packB along gj within L2 into packB_L2
+  parallel b0
+  registers (i, j) into c rows 4 lanes 16 through fma
+
+schedule big_tiles of matmul @(S = PlusTimes f32) on M4Gpu =
+  grid over (i, j)
+  tiles (i, j, k) (64, 32) (32, 16)
+
+struct Workspace = {
+  packA: [f32; 16, 16] in PanelMajor 4,
+  packB: [f32; 16, 8],
+}
+
+struct Fast = {
+  packA: [f32; 512, 256] in PanelMajor MR,
+  packB: [f32; 256, NR],
+}
+
+struct Bands = {
+  packA: [f32; 1024, 256] in PanelMajor 4,
+  packB: [f32; 256, 1024] in ColumnPanels 16,
+}
+
+struct Tiles = {
+  packA: [f64; 3072, 3072] in PanelMajor 32,
+  packB: [f64; 3072, 256] in ColumnPanels 16,
+}
+
+fn differ (reads x: [f32; 32, 32]) (reads y: [f32; 32, 32]) -> Nat =
+  var count: Nat = 0
+  for i in 0 .. 32 invariant count <= i * 32 do
+    for j in 0 .. 32 invariant count <= i * 32 + j do
+      if to_bits (x[i, j]) != to_bits (y[i, j]) then count = count + 1
+  count
+
+export fn main () =
+  temp a = allocate @DRAM [f32; 32, 32]
+  temp b = allocate @DRAM [f32; 32, 32]
+  temp c = allocate @DRAM [f32; 32, 32]
+  temp d = allocate @DRAM [f32; 32, 32]
+  temp w = allocate @DRAM View Workspace
+  var v: f32 = -1.5
+  for i in 0 .. 32 do
+    for k in 0 .. 32 do
+      a[i, k] = v
+      v = v + 0.37
+      if v > 2.0 then v = v - 3.2421875
+  var w2: f32 = 0.75
+  for k in 0 .. 32 do
+    for j in 0 .. 32 do
+      b[k, j] = w2
+      w2 = w2 - 0.61
+      if w2 < -1.0 then w2 = w2 + 2.4609375
+  c[.., ..] = -0.0
+  matmul @(S = PlusTimes f32) a b c
+  print (c[17, 23])
+  d[.., ..] = -0.0
+  rows @(S = PlusTimes f32) a b d
+  print (differ c d)
+  d[.., ..] = -0.0
+  swapped @(S = PlusTimes f32) a b d
+  print (differ c d)
+  d[.., ..] = -0.0
+  tiled a b d
+  print (differ c d)
+  d[.., ..] = -0.0
+  tower @(S = PlusTimes f32) a b d
+  print (differ c d)
+  d[.., ..] = -0.0
+  packed a b d (view w.packA) (view w.packB)
+  print (differ c d)
+  temp g = allocate @DRAM [f32; 32, 32]
+  temp h = allocate @DRAM [f32; 32, 32]
+  let infinity: f32 = from_bits (2139095040 as u32)
+  for i in 0 .. 32 do
+    for j in 0 .. 32 do
+      if i == j then g[i, j] = 0.0
+      else if (i + 1) % 32 == j then g[i, j] = (i + 1) as f32
+      else g[i, j] = infinity
+  h[.., ..] = infinity
+  matmul @(S = MinPlus f32) g g h
+  print (h[0, 2])

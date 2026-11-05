@@ -1,0 +1,13 @@
+---
+import { metric } from "./cachet-performance.mjs";
+interface Props {
+  run: string;
+  kernel: string;
+  kind?: "rate" | "speedup" | "percent";
+  other?: string;
+  digits?: number;
+}
+const { run, kernel, kind, other, digits } = Astro.props;
+---
+
+<span>{metric(run, kernel, kind, other, digits)}</span>

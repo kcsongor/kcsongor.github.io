@@ -1,0 +1,248 @@
+[
+  {
+    "name": "matmul",
+    "n": 1024,
+    "median_s": 1.843328167,
+    "min_s": 1.82459625,
+    "gflops": 1.17,
+    "reps": 5,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/matmul"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "swapped",
+    "n": 1024,
+    "median_s": 0.065644771,
+    "min_s": 0.065397291,
+    "gflops": 32.71,
+    "reps": 16,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/swapped"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "tower",
+    "n": 1024,
+    "median_s": 0.079348875,
+    "min_s": 0.078650667,
+    "gflops": 27.06,
+    "reps": 13,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/tower"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "packed",
+    "n": 1024,
+    "median_s": 0.04421275,
+    "min_s": 0.043827834,
+    "gflops": 48.57,
+    "reps": 23,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/packed"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "fast",
+    "n": 1024,
+    "median_s": 0.018546541,
+    "min_s": 0.018424625,
+    "gflops": 115.79,
+    "reps": 50,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/fast"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "bands",
+    "n": 1024,
+    "median_s": 0.002838292,
+    "min_s": 0.002736917,
+    "gflops": 756.61,
+    "reps": 50,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/bands"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "swapped_s1",
+    "n": 1024,
+    "median_s": 1.836161667,
+    "min_s": 1.833789,
+    "gflops": 1.17,
+    "reps": 5,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/swapped_s1"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "tower_s2",
+    "n": 1024,
+    "median_s": 1.428422,
+    "min_s": 1.417638667,
+    "gflops": 1.5,
+    "reps": 5,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/tower_s2"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "tower_s3",
+    "n": 1024,
+    "median_s": 1.440118875,
+    "min_s": 1.427444041,
+    "gflops": 1.49,
+    "reps": 5,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/tower_s3"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "tower_s4",
+    "n": 1024,
+    "median_s": 1.447359542,
+    "min_s": 1.424200375,
+    "gflops": 1.48,
+    "reps": 5,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/tower_s4"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "packed_s6",
+    "n": 1024,
+    "median_s": 0.055584916,
+    "min_s": 0.054974083,
+    "gflops": 38.63,
+    "reps": 18,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/packed_s6"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "packed_s7",
+    "n": 1024,
+    "median_s": 0.05549875,
+    "min_s": 0.05461925,
+    "gflops": 38.69,
+    "reps": 19,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/packed_s7"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "packed_s8",
+    "n": 1024,
+    "median_s": 0.058631042,
+    "min_s": 0.058025333,
+    "gflops": 36.63,
+    "reps": 18,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/packed_s8"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "packed_s9",
+    "n": 1024,
+    "median_s": 0.058546208,
+    "min_s": 0.057872375,
+    "gflops": 36.68,
+    "reps": 18,
+    "check": "bits",
+    "element": "f32",
+    "where": "CPU",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/packed_s9"
+    ],
+    "environment": {}
+  },
+  {
+    "name": "openblas_neon",
+    "n": 1024,
+    "median_s": 0.002488104,
+    "min_s": 0.002432875,
+    "gflops": 863.1,
+    "reps": 50,
+    "check": "close",
+    "element": "f32",
+    "where": "CPU, all cores",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/openblas_neon"
+    ],
+    "environment": {
+      "OPENBLAS_CORETYPE": "NEOVERSEN1"
+    }
+  },
+  {
+    "name": "openblas_neon_1",
+    "n": 1024,
+    "median_s": 0.019872375,
+    "min_s": 0.019317583,
+    "gflops": 108.06,
+    "reps": 50,
+    "check": "close",
+    "element": "f32",
+    "where": "CPU, one core",
+    "command": [
+      "/Users/cs/Dev/kcsongor.github.io/bench/results/2026-11-04b-cpu/build/1024/openblas_neon_1"
+    ],
+    "environment": {
+      "OPENBLAS_CORETYPE": "NEOVERSEN1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1"
+    }
+  }
+]

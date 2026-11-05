@@ -30,8 +30,9 @@ test("frontmatter fixes the language; snippet overrides and plaintext opt-out wo
 test("custom Cachet grammar emits both themes and safely escapes inline HTML", async () => {
   const html = await render('`"hello" < 42{:cachet}` and `"<script>alert(1)</script>"{:rust}`');
   assert.deepEqual(inlineLanguages(html), ["cachet", "rust"]);
-  assert(html.includes("--shiki-light:#B22222"));
-  assert(html.includes("--shiki-dark:#00AF87"));
+  // The accent in both themes, by the token class that carries it.
+  assert(html.includes('class="tk-accent"'));
+  assert(!html.includes("--shiki-light:"));
   assert(!html.includes("<script>"));
   assert(!html.includes("<pre"));
   assert(html.includes("&#x3C;script>"));

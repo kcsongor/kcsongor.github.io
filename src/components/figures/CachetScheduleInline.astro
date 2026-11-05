@@ -1,0 +1,241 @@
+---
+import schedules from "./cachet-schedule-stages.json";
+import excerpts from "./cachet-schedule-excerpts.json";
+import { sharedSource } from "./cachet-inline-source.mjs";
+import { listing } from "./cachet-highlight.mjs";
+import CachetTiming from "./CachetTiming.astro";
+import { hasTimings } from "./cachet-performance.mjs";
+
+interface Props {
+  name: keyof typeof schedules;
+  initialStage?: number;
+}
+
+const { name, initialStage = 0 } = Astro.props;
+const all = schedules[name];
+const shortened = excerpts[name];
+if (
+  all.length !== shortened.length ||
+  all.some((stage, i) => stage.title !== shortened[i].title)
+)
+  throw new Error(`Update the editorial excerpts for the ${name} schedule`);
+
+const escape = (text: string) =>
+  text.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
+const inline = (text: string) =>
+  escape(text).replace(/`([^`]+)`/g, "<code>$1</code>");
+// One source listing for each run of stages that show the same schedule,
+// each line saying which stages show it, whose rewrite it is and where it is
+// yet to come; the viewer applies a stage's to its lines. The listing starts
+// as the stage it opens at shows it, or its run's first stage.
+const sources = await Promise.all(
+  sharedSource(all).map(async (run) => {
+    const at = run.stages.includes(initialStage) ? initialStage : run.stages[0];
+    const marks = new Map(
+      run.lines.map((line, i) => [
+        i,
+        {
+          "data-shown": line.shown.join(" "),
+          "data-current-in": line.current.join(" "),
+          "data-future-in": line.future.join(" "),
+          ...(!line.shown.includes(at) && { hidden: true }),
+          ...(line.future.includes(at) && { "data-future": "" }),
+        },
+      ]),
+    );
+    const changed = new Set(
+      run.lines.flatMap((line, i) => (line.current.includes(at) ? [i] : [])),
+    );
+    return {
+      stages: run.stages,
+      html: await listing(run.code, undefined, marks, changed),
+    };
+  }),
+);
+const stages = await Promise.all(
+  all.map(async (stage, index) => {
+    return {
+      output: await listing(shortened[index].code),
+      note: inline(
+        stage.note +
+          (name === "tiled" && index === 2
+            ? " Here M and N must be multiples of 16, and K a multiple of 8."
+            : ""),
+      ),
+      claim: stage.verdict?.split("\n")[0] ?? "",
+    };
+  }),
+);
+---
+
+<cachet-inline-schedule class="not-prose" data-initial-stage={initialStage}>
+  <div class="inline-schedule-source inline-schedule-stack">
+    {
+      sources.map((source) => (
+        <div
+          data-source-stages={source.stages.join(" ")}
+          class:list={{ "is-current": source.stages.includes(initialStage) }}
+          aria-hidden={!source.stages.includes(initialStage)}
+          inert={!source.stages.includes(initialStage)}
+          set:html={source.html}
+        />
+      ))
+    }
+  </div>
+  <nav
+    class="inline-schedule-controls"
+    aria-label={`${name} schedule steps`}
+    hidden
+  >
+    <button type="button" data-step="-1">← Previous</button>
+    <span data-position aria-live="polite"></span>
+    <button type="button" data-step="1">Next →</button>
+  </nav>
+  <div class="inline-schedule-output inline-schedule-stack" data-output>
+    {
+      stages.map((stage, index) => (
+        <div
+          data-stage={index}
+          class:list={{ "is-current": index === initialStage }}
+          aria-hidden={index !== initialStage}
+          inert={index !== initialStage}
+          set:html={stage.output}
+        />
+      ))
+    }
+  </div>
+  <div class="inline-schedule-notes inline-schedule-stack">
+    {
+      stages.map((stage, index) => (
+        <div
+          data-stage={index}
+          class:list={{ "is-current": index === initialStage }}
+          aria-hidden={index !== initialStage}
+          inert={index !== initialStage}
+        >
+          <p set:html={stage.note} />
+          {hasTimings(name) && <CachetTiming schedule={name} step={index} title={all[index].title} />}
+          <p class="inline-schedule-claim">
+            <code>{stage.claim}</code>
+          </p>
+        </div>
+      ))
+    }
+  </div>
+</cachet-inline-schedule>
+
+<script>
+  import "./cachet-inline-schedule.js";
+</script>
+
+<style>
+  cachet-inline-schedule {
+    display: block;
+    margin: 2rem 0;
+    min-width: 0;
+  }
+  .inline-schedule-stack {
+    display: grid;
+    position: relative;
+  }
+  .inline-schedule-stack > :is([data-stage], [data-source-stages]) {
+    grid-area: 1 / 1;
+    min-width: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .inline-schedule-stack > .is-current {
+    visibility: visible;
+    pointer-events: auto;
+  }
+  :global(#article) cachet-inline-schedule :global(pre) {
+    margin: 0;
+    padding: 0.8rem 1rem;
+    border-radius: 0;
+    line-height: 1.65;
+    overflow-x: auto;
+  }
+  :global(#article) .inline-schedule-source :global(pre) {
+    padding: 0.5rem 0 0.5rem 0.9rem;
+    border-left: 2px solid var(--border);
+    background: transparent !important;
+  }
+  :global(#article) cachet-inline-schedule :global(pre code) {
+    display: block;
+    font-size: 0.875rem;
+    line-height: inherit;
+    white-space: normal;
+  }
+  cachet-inline-schedule :global(.line) {
+    display: block;
+    min-height: 1.65em;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    padding-left: var(--continuation-indent);
+    text-indent: calc(0px - var(--continuation-indent));
+  }
+  .inline-schedule-source :global(.is-changed),
+  .inline-schedule-output :global(.rewrite-line-added),
+  .inline-schedule-output :global(.rewrite-line-moved) {
+    background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  }
+  .inline-schedule-source :global([data-future]) {
+    opacity: 0.5;
+  }
+  .inline-schedule-source :global(.line[hidden]) {
+    display: none;
+  }
+  .inline-schedule-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin: 0.8rem 0;
+    font-size: 0.8rem;
+  }
+  .inline-schedule-controls[hidden] {
+    display: none;
+  }
+  button {
+    padding: 0.2rem 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  button:hover:not(:disabled) {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  button:focus-visible {
+    outline: 2px solid var(--foreground);
+    outline-offset: 4px;
+  }
+  .inline-schedule-notes {
+    margin-top: 0.65rem;
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+  .inline-schedule-notes p {
+    margin: 0 0 0.4rem;
+  }
+  .inline-schedule-claim {
+    min-height: 1.6em;
+  }
+  .inline-schedule-output :global(.rewrite-overlay) {
+    position: absolute;
+    inset: 0;
+    overflow: hidden !important;
+    pointer-events: none;
+  }
+  @media print {
+    .inline-schedule-controls {
+      display: none;
+    }
+  }
+</style>

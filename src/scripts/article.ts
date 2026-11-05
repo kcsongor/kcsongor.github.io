@@ -10,6 +10,8 @@ for (const heading of document.querySelectorAll<HTMLElement>("#article :is(h2,h3
 }
 for (const block of document.querySelectorAll<HTMLPreElement>("#article pre")) {
   block.tabIndex = 0;
+  // Interactive schedule panes provide their own copy buttons in the header.
+  if (block.hasAttribute("data-copy-managed")) continue;
   if (!block.querySelector("code")) continue;
   if (!navigator.clipboard) continue;
   const wrapper = document.createElement("div");

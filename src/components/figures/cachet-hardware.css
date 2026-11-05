@@ -1,0 +1,123 @@
+.cachet-hardware {
+  display: block;
+  --hw-muted: var(--matrix-muted);
+  --hw-a: var(--matrix-first);
+  --hw-b: var(--matrix-second);
+  --hw-c: var(--matrix-third);
+  --hw-green: light-dark(#337c68, #7bc8aa);
+  color: var(--foreground);
+}
+.cachet-hardware [hidden] {
+  display: none !important;
+}
+.hw-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  margin-block: 0.8rem 1rem;
+}
+.hw-options {
+  display: flex;
+  gap: 0.35rem;
+  margin-right: auto;
+}
+.cachet-hardware button {
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+.hw-playback {
+  display: flex;
+  gap: 0.35rem;
+}
+.hw-playback button:first-child {
+  min-width: 4.8rem;
+}
+.hw-diagram {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+.hw-diagram text {
+  fill: currentColor;
+  font-family: inherit;
+}
+.hw-diagram .hw-muted {
+  fill: var(--hw-muted);
+}
+.hw-diagram .hw-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+.hw-diagram .hw-small {
+  font-size: 13px;
+}
+.hw-diagram .hw-mono {
+  font-family: var(--font-mono, monospace);
+}
+.hw-diagram .hw-idle {
+  fill: var(--matrix-idle);
+}
+.hw-diagram .hw-frame {
+  fill: none;
+  stroke: var(--border);
+}
+.hw-diagram .hw-a {
+  color: var(--hw-a);
+}
+.hw-diagram .hw-b {
+  color: var(--hw-b);
+}
+.hw-diagram .hw-c {
+  color: var(--hw-c);
+}
+.hw-caption {
+  color: var(--hw-muted);
+  font-size: 0.8rem;
+  line-height: 1.65;
+  margin: 0.8rem 0 0;
+}
+.hw-caption strong {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.hw-model {
+  color: var(--hw-muted);
+  font-size: 0.7rem;
+  line-height: 1.6;
+  margin: 0.6rem 0 0;
+}
+.hw-description {
+  min-height: 3.4em;
+}
+.hw-diagram [role="slider"] {
+  cursor: ew-resize;
+  touch-action: none;
+}
+.hw-diagram [role="slider"]:focus-visible {
+  outline: none;
+}
+.hw-diagram [role="slider"]:focus-visible .hw-grip {
+  stroke: var(--hw-a);
+  stroke-width: 3;
+}
+@media (max-width: 480px) {
+  .hw-toolbar {
+    gap: 0.5rem;
+  }
+  .cachet-hardware button {
+    padding-inline: 0.65rem;
+    font-size: 0.75rem;
+  }
+}
+
+.cachet-hardware[data-compact="true"] .hw-diagram {
+  max-width: 360px;
+  margin-inline: auto;
+}
+.cachet-hardware.gpu-figure figcaption {
+  font-size: 1rem;
+  letter-spacing: 0;
+  line-height: 1.5;
+}

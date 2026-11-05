@@ -1,0 +1,494 @@
+{
+  "date": "2026-11-04",
+  "revision": "afbfbdc74",
+  "machine": "Apple M4 Max",
+  "runs": {
+    "cpu": {
+      "source": "bench/results/2026-11-04b-cpu/results.json",
+      "size": 1024,
+      "precision": "f32",
+      "measurements": {
+        "matmul": {
+          "gflops": 1.17,
+          "seconds": 1.843328167
+        },
+        "swapped": {
+          "gflops": 32.71,
+          "seconds": 0.065644771
+        },
+        "tower": {
+          "gflops": 27.06,
+          "seconds": 0.079348875
+        },
+        "packed": {
+          "gflops": 48.57,
+          "seconds": 0.04421275
+        },
+        "fast": {
+          "gflops": 115.79,
+          "seconds": 0.018546541
+        },
+        "bands": {
+          "gflops": 756.61,
+          "seconds": 0.002838292
+        },
+        "swapped_s1": {
+          "gflops": 1.17,
+          "seconds": 1.836161667
+        },
+        "tower_s2": {
+          "gflops": 1.5,
+          "seconds": 1.428422
+        },
+        "tower_s3": {
+          "gflops": 1.49,
+          "seconds": 1.440118875
+        },
+        "tower_s4": {
+          "gflops": 1.48,
+          "seconds": 1.447359542
+        },
+        "packed_s6": {
+          "gflops": 38.63,
+          "seconds": 0.055584916
+        },
+        "packed_s7": {
+          "gflops": 38.69,
+          "seconds": 0.05549875
+        },
+        "packed_s8": {
+          "gflops": 36.63,
+          "seconds": 0.058631042
+        },
+        "packed_s9": {
+          "gflops": 36.68,
+          "seconds": 0.058546208
+        },
+        "openblas_neon": {
+          "gflops": 863.1,
+          "seconds": 0.002488104
+        },
+        "openblas_neon_1": {
+          "gflops": 108.06,
+          "seconds": 0.019872375
+        }
+      }
+    },
+    "climb": {
+      "source": "bench/results/2026-11-04b-climb/results.json",
+      "size": 1024,
+      "precision": "f32",
+      "measurements": {
+        "packed": {
+          "gflops": 47.32,
+          "seconds": 0.045386792
+        },
+        "fast": {
+          "gflops": 115.68,
+          "seconds": 0.018564729
+        },
+        "big": {
+          "gflops": 48.01,
+          "seconds": 0.044729041
+        },
+        "big_order": {
+          "gflops": 65.5,
+          "seconds": 0.032788417
+        },
+        "openblas_neon_1": {
+          "gflops": 108.19,
+          "seconds": 0.019849937
+        }
+      }
+    },
+    "sme": {
+      "source": "bench/results/2026-11-04g-sme/results.json",
+      "size": 3072,
+      "precision": "f64",
+      "measurements": {
+        "matmul_f64": {
+          "gflops": 0.83,
+          "seconds": 69.476691625,
+          "source": "bench/results/2026-11-04b-sme/results.json"
+        },
+        "sme": {
+          "gflops": 894.47,
+          "seconds": 0.064822708,
+          "source": "bench/results/2026-11-05-sme-1/results.json"
+        },
+        "sme_s1": {
+          "gflops": 0.93,
+          "seconds": 62.386226459
+        },
+        "sme_s2": {
+          "gflops": 0.94,
+          "seconds": 61.876991917
+        },
+        "sme_s3": {
+          "gflops": 0.92,
+          "seconds": 63.067503541
+        },
+        "sme_s4": {
+          "gflops": 1.19,
+          "seconds": 48.650123209
+        },
+        "sme_s5": {
+          "gflops": 2.01,
+          "seconds": 28.797851916
+        },
+        "sme_s6": {
+          "gflops": 1.76,
+          "seconds": 32.895088125
+        },
+        "sme_s7": {
+          "gflops": 1.75,
+          "seconds": 33.041838667
+        },
+        "sme_s8": {
+          "gflops": 1.71,
+          "seconds": 33.919667417
+        },
+        "sme_s9": {
+          "gflops": 3.83,
+          "seconds": 15.13853675
+        },
+        "sme_s10": {
+          "gflops": 3.86,
+          "seconds": 15.0353595
+        },
+        "sme_s11": {
+          "gflops": 3.92,
+          "seconds": 14.800118666
+        },
+        "sme_s12": {
+          "gflops": 3.87,
+          "seconds": 14.984227958
+        },
+        "sme_s13": {
+          "gflops": 42.03,
+          "seconds": 1.379474209
+        },
+        "accelerate_f64": {
+          "gflops": 870.53,
+          "seconds": 0.066605584,
+          "source": "bench/results/2026-11-05-sme-3/results.json"
+        }
+      }
+    },
+    "gpu": {
+      "source": "bench/results/2026-11-04c-gpu/results.json",
+      "size": 4096,
+      "precision": "f32",
+      "measurements": {
+        "rows": {
+          "gflops": 2399.44,
+          "seconds": 0.057279667
+        },
+        "tiled": {
+          "gflops": 5281.89,
+          "seconds": 0.026020792
+        },
+        "big_tiles": {
+          "gflops": 12407.36,
+          "seconds": 0.011077208
+        },
+        "mlx": {
+          "gflops": 13113.0,
+          "seconds": 0.010481125
+        },
+        "matmul": {
+          "gflops": 0.65,
+          "seconds": 211.498492041,
+          "source": "bench/results/2026-11-04b-gpu/results.json"
+        }
+      }
+    }
+  },
+  "targets": {
+    "one_core": {
+      "library": "OpenBLAS",
+      "hardware": "CPU · one core",
+      "instructions": "NEON vectors",
+      "workload": "cpu",
+      "measurement": "cpu.openblas_neon_1"
+    },
+    "all_cores": {
+      "library": "OpenBLAS",
+      "hardware": "CPU · all cores",
+      "instructions": "NEON vectors",
+      "workload": "cpu",
+      "measurement": "cpu.openblas_neon"
+    },
+    "tuning": {
+      "library": "OpenBLAS",
+      "hardware": "CPU · one core",
+      "instructions": "NEON vectors",
+      "workload": "climb",
+      "measurement": "climb.openblas_neon_1"
+    },
+    "matrix_units": {
+      "library": "Accelerate",
+      "hardware": "CPU · matrix units",
+      "instructions": "SME matrix instructions",
+      "workload": "sme",
+      "measurement": "sme.accelerate_f64"
+    },
+    "gpu": {
+      "library": "MLX",
+      "hardware": "GPU",
+      "instructions": "Metal",
+      "workload": "gpu",
+      "measurement": "gpu.mlx"
+    }
+  },
+  "scheduleTargets": {
+    "swap": "one_core",
+    "rows": "gpu",
+    "tiled": "gpu",
+    "tower": "one_core",
+    "fast": "tuning",
+    "sme": "matrix_units"
+  },
+  "stages": {
+    "swap": [
+      {
+        "step": "The contraction",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.matmul"
+      },
+      {
+        "step": "zero (i, j) c",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.swapped_s1"
+      },
+      {
+        "step": "hoist (j, k) c",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.swapped"
+      }
+    ],
+    "rows": [
+      {
+        "step": "The contraction",
+        "workload": "gpu",
+        "target": "CPU",
+        "measurement": "gpu.matmul"
+      },
+      {
+        "step": "grid over (i, j)",
+        "workload": "gpu",
+        "target": "GPU",
+        "measurement": "gpu.rows"
+      }
+    ],
+    "tiled": [
+      {
+        "step": "The contraction",
+        "workload": "gpu",
+        "target": "CPU",
+        "measurement": "gpu.matmul"
+      },
+      {
+        "step": "grid over (i, j)",
+        "workload": "gpu",
+        "target": "GPU",
+        "measurement": "gpu.rows"
+      },
+      {
+        "step": "tiles (i, j, k) (16, 16) (8, 8)",
+        "workload": "gpu",
+        "target": "GPU",
+        "measurement": "gpu.tiled"
+      }
+    ],
+    "tower": [
+      {
+        "step": "The contraction",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.matmul"
+      },
+      {
+        "step": "zero (i, j) c",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.swapped_s1"
+      },
+      {
+        "step": "split k by 16 as gk ragged",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.tower_s2"
+      },
+      {
+        "step": "split i by 16 as gi, 4 as ui ragged",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.tower_s3"
+      },
+      {
+        "step": "split j by 8 as gj ragged",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.tower_s4"
+      },
+      {
+        "step": "order (gk, gj, gi, ui, i, j)",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.tower"
+      },
+      {
+        "step": "pack a into packA along gi over (a0, a1)",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.packed_s6"
+      },
+      {
+        "step": "keep packA along gi within L2 into packA_L2",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.packed_s7"
+      },
+      {
+        "step": "pack b into packB along gj over (b0, b1)",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.packed_s8"
+      },
+      {
+        "step": "keep packB along gj within L1 into packB_L1",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.packed_s9"
+      },
+      {
+        "step": "registers (i, j) into c rows 4 lanes 8 through fma",
+        "workload": "cpu",
+        "target": "CPU",
+        "measurement": "cpu.packed"
+      }
+    ],
+    "fast": [
+      {
+        "step": "packed",
+        "workload": "climb",
+        "target": "CPU",
+        "measurement": "climb.packed"
+      },
+      {
+        "step": "Larger blocks",
+        "workload": "climb",
+        "target": "CPU",
+        "measurement": "climb.big"
+      },
+      {
+        "step": "Rows first",
+        "workload": "climb",
+        "target": "CPU",
+        "measurement": "climb.big_order"
+      },
+      {
+        "step": "A wider tile",
+        "workload": "climb",
+        "target": "CPU",
+        "measurement": "climb.fast"
+      }
+    ],
+    "sme": [
+      {
+        "step": "The contraction",
+        "workload": "sme",
+        "target": "CPU",
+        "measurement": "sme.matmul_f64"
+      },
+      {
+        "step": "split k by 3072 as gk ragged",
+        "workload": "sme",
+        "target": "CPU",
+        "measurement": "sme.sme_s1"
+      },
+      {
+        "step": "split j by 256 as gj, 16 as uj",
+        "workload": "sme",
+        "target": "CPU",
+        "measurement": "sme.sme_s2"
+      },
+      {
+        "step": "split i by 1536 as gi, 32 as ui",
+        "workload": "sme",
+        "target": "CPU",
+        "measurement": "sme.sme_s3"
+      },
+      {
+        "step": "order (gk, gj, gi, ui, uj, i, j)",
+        "workload": "sme",
+        "target": "CPU",
+        "measurement": "sme.sme_s4"
+      },
+      {
+        "step": "parallel gi",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme_s5"
+      },
+      {
+        "step": "pack a into packA along gk over (a0, a1)",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme_s6"
+      },
+      {
+        "step": "strip a0 32 (pa, ra)",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme_s7"
+      },
+      {
+        "step": "parallel pa",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme_s8"
+      },
+      {
+        "step": "pack b into packB along gj over (b0, b1)",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme_s9"
+      },
+      {
+        "step": "strip b1 16 (pb, rb)",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme_s10"
+      },
+      {
+        "step": "interchange (b0, pb)",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme_s11"
+      },
+      {
+        "step": "parallel pb",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme_s12"
+      },
+      {
+        "step": "registers (i, j) into c rows 32 lanes 16 through fma",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme_s13"
+      },
+      {
+        "step": "outer_products i c 8 8 outer_fma_primitive",
+        "workload": "sme",
+        "target": "CPU · parallel",
+        "measurement": "sme.sme"
+      }
+    ]
+  }
+}
