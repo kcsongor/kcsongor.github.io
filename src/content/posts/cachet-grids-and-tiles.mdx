@@ -136,7 +136,7 @@ Since the free indices say nothing about order, the outputs can be computed in a
 
 ### Rewriting the loop nest
 
-A contraction has a precise meaning as a loop nest. You can ask Cachet's compiler, `cachetc`, to print it with `cachetc scheduled`.[^loop-listings]
+A contraction has a precise meaning as a loop nest. You can ask Cachet's compiler, `cachetc`, to print it with `cachetc scheduled`.
 
 A *schedule* is a sequence of rewrites that turns this loop nest into another function. The compiler applies the rewrites once, when it builds the program. Calling the resulting function just runs the kernel.
 
@@ -159,8 +159,6 @@ After both steps, the line at the bottom summarises the schedule's [*claim*](#pa
 The `hoist` we used for `matmul` is a *step function* from the `cachet:steps` library: a rewrite with a proof recipe. Its [definition](#panel-hoist) gives a piece of program to match, its replacement, and instructions for checking that the result is preserved. Every time we use the step, the checker has to establish this for the actual program we're rewriting.
 
 Most other steps are defined in `cachet:steps` in the same way. A few layout steps, such as `split` and `order`, are built into the compiler.
-
-[^loop-listings]: The listings are shortened for readability. `cachetc scheduled` prints each sum as a `fold`, an expression that carries a running total; this post writes it as a loop. When the fold starts from its output cell, we show the equivalent updates to that cell, as the checker sees them. These are explanatory listings, not the final machine code. The compiler also prints `-> out c` as the parameter `(mut c: …)` with `produces Init c`, which this post writes as `-> out c`.
 
 ## Blocking matrix multiplication
 
