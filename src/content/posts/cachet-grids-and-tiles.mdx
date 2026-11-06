@@ -132,7 +132,7 @@ This is a *contraction*: a function defined by an equation for each output eleme
 - `k` only appears under the `sum`, so it's *summed*: for each output, we multiply the pairs of inputs it selects and add up the products.
 - `*` and `+` come from the element type. Here that's `f32`, but we'll see later that the same formula works when an element is a block (another matrix).
 
-Since the free indices say nothing about order, the outputs can be computed in any order, or all at once. The summed index is different. A plain `sum` keeps its order: each output accumulates its products in ascending order of `k`, however the outputs themselves are interleaved.
+Since the free indices say nothing about order, the outputs can be computed in any order, or all at once.
 
 ### Rewriting the loop nest
 
